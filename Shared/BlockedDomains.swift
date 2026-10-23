@@ -1,54 +1,38 @@
 import Foundation
 
-/// The user's web blocklist, shared with the packet-tunnel extension through
-/// the App Group. Matching is host-level (domain + subdomains), with an
-/// optional substring match so a bare keyword like "casino" blocks any host
-/// that contains it.
+/// Host-level domain matching used by the DNS tunnel. Stateless: the set of
+/// blocked domains now lives on each `Blocklist`, and the currently enforced
+/// set is mirrored into `SharedState.activeDomains`.
 ///
-/// NOTE: this is host/domain matching, NOT full-URL matching. iOS gives no
-/// personal (non-MDM) app visibility into the encrypted URL path or query, so
-/// a true "keyword anywhere in the URL" rule is out of scope by design.
+/// NOTE: host/domain matching only. iOS gives no personal (non-MDM) app the
+/// encrypted URL path, so this cannot match a keyword inside a full URL — only
+/// the site's host.
 enum BlockedDomains {
-    private static var d: UserDefaults { AppGroup.defaults }
-    private static let key = "blockedDomains"
-
-    /// Normalized blocklist entries (lowercased, `www.` stripped).
-    static var entries: [String] {
-        get { (d.array(forKey: key) as? [String]) ?? [] }
-        set { d.set(newValue.map(normalize), forKey: key) }
-    }
-
-    static func add(_ raw: String) {
-        let e = normalize(raw)
-        guard !e.isEmpty else { return }
-        var list = entries
-        guard !list.contains(e) else { return }
-        list.append(e)
-        entries = list
-    }
-
-    static func remove(_ raw: String) {
-        let e = normalize(raw)
-        entries = entries.filter { $0 != e }
-    }
-
+    /// Reduce a user-typed value to a bare host (drop scheme/path, `www.`).
     static func normalize(_ raw: String) -> String {
         var s = raw.lowercased().trimmingCharacters(in: .whitespaces)
-        // Strip scheme and any path — we only keep the host part.
         if let range = s.range(of: "://") { s = String(s[range.upperBound...]) }
         if let slash = s.firstIndex(of: "/") { s = String(s[..<slash]) }
         if s.hasPrefix("www.") { s = String(s.dropFirst(4)) }
         return s
     }
 
-    /// True if `host` should be blocked given the current blocklist.
-    static func isBlocked(host: String) -> Bool {
+    /// True if `host` matches any entry (exact, subdomain, or — for a bare
+    /// keyword with no dot — substring of the host).
+    static func isBlocked(host: String, in entries: [String]) -> Bool {
         let h = normalize(host)
-        for e in entries where !e.isEmpty {
-            if h == e { return true }               // exact
-            if h.hasSuffix("." + e) { return true } // subdomain of e
-            if !e.contains(".") && h.contains(e) { return true } // keyword in host
+        for raw in entries {
+            let e = normalize(raw)
+            guard !e.isEmpty else { continue }
+            if h == e { return true }
+            if h.hasSuffix("." + e) { return true }
+            if !e.contains(".") && h.contains(e) { return true }
         }
         return false
+    }
+
+    /// Convenience against the currently enforced set.
+    static func isBlocked(host: String) -> Bool {
+        isBlocked(host: host, in: SharedState.activeDomains)
     }
 }

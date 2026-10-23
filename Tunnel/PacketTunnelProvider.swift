@@ -70,7 +70,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         if BlockedDomains.isBlocked(host: name) {
             if let nx = DNSMessage.makeNXDomainResponse(from: parsed.payload) {
                 let reply = parsed.makeReply(responsePayload: nx)
-                packetFlow.writePackets([reply], withProtocols: [AF_INET as NSNumber])
+                packetFlow.writePackets([reply], withProtocols: [NSNumber(value: AF_INET)])
             }
             return
         }
@@ -92,7 +92,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             conn.receiveMessage { [weak self] data, _, _, _ in
                 if let data, let self {
                     let reply = request.makeReply(responsePayload: data)
-                    self.packetFlow.writePackets([reply], withProtocols: [AF_INET as NSNumber])
+                    self.packetFlow.writePackets([reply], withProtocols: [NSNumber(value: AF_INET)])
                 }
                 conn.cancel()
             }

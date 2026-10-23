@@ -10,6 +10,9 @@ root helper, no VPN.
 ## Features
 
 - **Block apps, categories and websites** using the system `FamilyActivityPicker`.
+- **Cross-browser website blocking** via a DNS-filtering packet tunnel, so a
+  blocked domain fails to resolve in Safari, Chrome, Firefox and every app —
+  no root CA, no TLS interception.
 - **Timed focus sessions** or block-until-you-stop.
 - **Strict mode**, three levels:
   - *Off* — stop anytime.
@@ -35,15 +38,43 @@ root helper, no VPN.
 
 ```
 project.yml      XcodeGen spec (generates FocusLock.xcodeproj)
-App/             the SwiftUI app (UI, authorization, block controller)
-Shared/          code compiled into the app AND both extensions
+App/             the SwiftUI app (UI, authorization, block + tunnel control)
+Shared/          code compiled into the app AND all extensions
 Monitor/         DeviceActivityMonitor extension
 Shield/          ShieldConfiguration extension (custom block screen)
+Tunnel/          NEPacketTunnelProvider extension (DNS website filter)
 ```
 
-`Shared/` holds the App Group config, persistent state, PIN hashing and the
-`BlockingManager`, so the app and the two extensions all read and write the
-same `ManagedSettings` store and saved selection.
+`Shared/` holds the App Group config, persistent state, PIN hashing, the
+`BlockingManager` and the blocked-domain list, so the app and every extension
+read and write the same `ManagedSettings` store, selection and blocklist.
+
+## Two blocking layers
+
+FocusLock uses the two approaches together, because neither covers everything:
+
+- **Screen Time (Family Controls)** blocks apps from launching, shields Safari
+  sites, and enforces the can't-delete lock. The network can't do these.
+- **DNS packet tunnel (`Tunnel/`)** blocks websites by domain in *every*
+  browser and app. Screen Time's site blocking is effectively Safari-only.
+
+### How the tunnel works
+
+It runs as a user-approved VPN in standard routing mode (no MDM, no supervised
+device). It advertises itself as the system DNS server, then answers blocked
+hosts with NXDOMAIN and forwards the rest to an upstream resolver. It reads
+only the queried hostname.
+
+**Honest limits of the tunnel:**
+
+- **Host/domain level only.** It never decrypts TLS, so it cannot match a
+  keyword inside a URL path or query — only the site's host. True URL-keyword
+  blocking would require a root CA + TLS interception (what Freedom does), which
+  breaks cert-pinned apps and exposes all your traffic. Out of scope by design.
+- **Bypassable** by apps that use hardcoded IPs or their own DoH/DoT resolver.
+- IPv6 and TCP/53 are TODO; `Tunnel/PacketTunnelProvider.swift` is IPv4 UDP DNS.
+- The packet/DNS code is hand-rolled and needs on-device testing before you
+  rely on it.
 
 ## Generate the Xcode project
 
@@ -65,14 +96,19 @@ Configuration Extension*), and drag in the `App/`, `Shared/`, `Monitor/` and
 
 ## Configure signing (once)
 
-1. In **Signing & Capabilities** for each of the three targets, pick your Team.
-2. Change the bundle IDs from `com.example.focuslock*` to your own prefix.
-3. Add the **Family Controls** capability to all three targets.
-4. Add the **App Groups** capability to all three and create one group, then set
-   it in `Shared/AppGroup.swift`, `App/FocusLock.entitlements`,
-   `Monitor/Monitor.entitlements` and `Shield/Shield.entitlements` (they must
-   all match).
-5. Build to your iPhone, launch, tap **Grant access** to authorize Screen Time.
+1. In **Signing & Capabilities** for each of the four targets, pick your Team.
+2. Change the bundle IDs from `com.example.focuslock*` to your own prefix. Keep
+   the tunnel's id in sync with `providerBundleID` in `App/TunnelController.swift`.
+3. Add the **Family Controls** capability to the app, Monitor and Shield targets.
+4. Add the **Network Extension** capability (Packet Tunnel) to the **app** and
+   the **Tunnel** target.
+5. Add the **App Groups** capability to all four targets and create one group,
+   then set it in `Shared/AppGroup.swift`, `App/FocusLock.entitlements`,
+   `Monitor/Monitor.entitlements`, `Shield/Shield.entitlements` and
+   `Tunnel/Tunnel.entitlements` (they must all match).
+6. Build to your iPhone, launch, tap **Grant access** to authorize Screen Time.
+   The first time a session starts the website filter, iOS prompts to **add a
+   VPN configuration** — approve it.
 
 ## Strict mode — honest limits
 

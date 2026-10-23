@@ -17,7 +17,8 @@ root helper, no VPN.
 - **Cross-browser website blocking** via a DNS-filtering packet tunnel, so a
   blocked domain fails to resolve in Safari, Chrome, Firefox and every app —
   no root CA, no TLS interception.
-- **Manual focus sessions** — start any blocklist now, timed or until you stop.
+- **Manual focus sessions** — start one or more blocklists now, timed or until
+  you stop. They stack with whatever schedules are running.
 - **Strict mode**, three levels:
   - *Off* — stop anytime.
   - *PIN required* — stopping a block needs your PIN.
@@ -64,8 +65,12 @@ models + stores — so the app and every extension read and write the same
   registers one `DeviceActivity` monitor per weekday (`sch.<id>.<weekday>`); the
   monitor extension activates/deactivates the blocklist at the window edges and
   publishes its domains to `SharedState.activeDomains` for the tunnel.
-- Only one blocklist is enforced at a time. Overnight windows (end before
-  start) aren't supported yet.
+- **Several blocklists can run at once** — started by hand and/or by
+  overlapping schedules. The enforced block is the union of every active
+  blocklist's apps, categories and domains (see `BlockingManager.recompute`).
+- **Overnight windows** (end earlier than start) are supported: ScheduleManager
+  splits them across midnight into an `.a` segment (start→23:59) and a `.b`
+  segment (00:00→end next day). The block lifts for under a minute at midnight.
 
 ## Two blocking layers
 

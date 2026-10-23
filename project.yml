@@ -1,0 +1,64 @@
+name: FocusLock
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    # Set your 10-character Apple Developer Team ID here, or set it in Xcode's
+    # Signing & Capabilities for each target.
+    DEVELOPMENT_TEAM: ""
+    SWIFT_VERSION: "5.0"
+
+targets:
+  FocusLock:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+    info:
+      path: App/Info.plist
+    entitlements:
+      path: App/FocusLock.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock
+        INFOPLIST_KEY_CFBundleDisplayName: FocusLock
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+    dependencies:
+      - target: FocusLockMonitor
+      - target: FocusLockShield
+
+  FocusLockMonitor:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Monitor
+      - Shared
+    info:
+      path: Monitor/Info.plist
+    entitlements:
+      path: Monitor/Monitor.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.monitor
+
+  FocusLockShield:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Shield
+      - Shared
+    info:
+      path: Shield/Info.plist
+    entitlements:
+      path: Shield/Shield.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.shield

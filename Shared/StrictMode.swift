@@ -30,22 +30,35 @@ enum SharedState {
     private static var d: UserDefaults { AppGroup.defaults }
 
     private enum Key {
-        static let selection = "selectionData"
         static let isBlocking = "isBlocking"
         static let lockedUntil = "lockedUntil"
         static let strict = "strictLevel"
         static let pinHash = "pinHash"
         static let pinSalt = "pinSalt"
-        static let activityName = "activityName"
+        static let activeDomains = "activeDomains"
+        static let activeBlocklistID = "activeBlocklistID"
+        static let manualRunning = "manualRunning"
     }
 
-    // MARK: Selection (encoded FamilyActivitySelection)
+    // MARK: Active blocklist (set by a manual run OR by a schedule)
 
-    /// Raw encoded `FamilyActivitySelection`. Stored as Data because the
-    /// token types are opaque and only round-trip through Codable.
-    static var selectionData: Data? {
-        get { d.data(forKey: Key.selection) }
-        set { d.set(newValue, forKey: Key.selection) }
+    /// Domains the tunnel should block right now. Empty = block nothing.
+    static var activeDomains: [String] {
+        get { (d.array(forKey: Key.activeDomains) as? [String]) ?? [] }
+        set { d.set(newValue, forKey: Key.activeDomains) }
+    }
+
+    /// The blocklist currently enforced, if any.
+    static var activeBlocklistID: String? {
+        get { d.string(forKey: Key.activeBlocklistID) }
+        set { d.set(newValue, forKey: Key.activeBlocklistID) }
+    }
+
+    /// True when the user started a block by hand (vs. a schedule). Lets a
+    /// schedule's interval-end avoid tearing down a manual session.
+    static var manualRunning: Bool {
+        get { d.bool(forKey: Key.manualRunning) }
+        set { d.set(newValue, forKey: Key.manualRunning) }
     }
 
     // MARK: Block state

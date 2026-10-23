@@ -15,6 +15,7 @@ struct FocusLockApp: App {
                 .task {
                     auth.refresh()
                     await tunnel.load()
+                    ScheduleManager.shared.refreshAll()
                 }
         }
     }

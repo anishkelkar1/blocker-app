@@ -10,11 +10,11 @@ struct ContentView: View {
             HomeView()
                 .tabItem { Label("Focus", systemImage: "lock.shield") }
 
-            PickerView()
-                .tabItem { Label("Blocklist", systemImage: "list.bullet") }
+            BlocklistsView()
+                .tabItem { Label("Blocklists", systemImage: "list.bullet") }
 
-            WebsiteRulesView()
-                .tabItem { Label("Websites", systemImage: "globe") }
+            SchedulesView()
+                .tabItem { Label("Schedules", systemImage: "calendar") }
 
             StrictModeView()
                 .tabItem { Label("Strict", systemImage: "exclamationmark.lock") }

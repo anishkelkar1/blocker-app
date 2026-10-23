@@ -9,11 +9,15 @@ root helper, no VPN.
 
 ## Features
 
-- **Block apps, categories and websites** using the system `FamilyActivityPicker`.
+- **Named blocklists** — reusable sets of apps/categories (system
+  `FamilyActivityPicker`) plus website domains. Create as many as you like.
+- **Recurring schedules** — run a blocklist on chosen weekdays between a start
+  and end time. Driven by `DeviceActivity`, so blocks fire even when the app is
+  closed.
 - **Cross-browser website blocking** via a DNS-filtering packet tunnel, so a
   blocked domain fails to resolve in Safari, Chrome, Firefox and every app —
   no root CA, no TLS interception.
-- **Timed focus sessions** or block-until-you-stop.
+- **Manual focus sessions** — start any blocklist now, timed or until you stop.
 - **Strict mode**, three levels:
   - *Off* — stop anytime.
   - *PIN required* — stopping a block needs your PIN.
@@ -46,8 +50,22 @@ Tunnel/          NEPacketTunnelProvider extension (DNS website filter)
 ```
 
 `Shared/` holds the App Group config, persistent state, PIN hashing, the
-`BlockingManager` and the blocked-domain list, so the app and every extension
-read and write the same `ManagedSettings` store, selection and blocklist.
+`BlockingManager`, the domain matcher, and the `Blocklist` / `BlockSchedule`
+models + stores — so the app and every extension read and write the same
+`ManagedSettings` store, blocklists and schedules.
+
+### Blocklists and schedules
+
+- A **blocklist** (`Shared/Blocklist.swift`) bundles an encoded
+  `FamilyActivitySelection` (apps/categories/Safari sites) with a list of
+  website domains for the tunnel. Manage them in the **Blocklists** tab.
+- A **schedule** (`Shared/BlockSchedule.swift`) points at a blocklist and runs
+  it on chosen weekdays between a start/end time. `App/ScheduleManager.swift`
+  registers one `DeviceActivity` monitor per weekday (`sch.<id>.<weekday>`); the
+  monitor extension activates/deactivates the blocklist at the window edges and
+  publishes its domains to `SharedState.activeDomains` for the tunnel.
+- Only one blocklist is enforced at a time. Overnight windows (end before
+  start) aren't supported yet.
 
 ## Two blocking layers
 

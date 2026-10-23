@@ -30,43 +30,45 @@ enum SharedState {
     private static var d: UserDefaults { AppGroup.defaults }
 
     private enum Key {
-        static let isBlocking = "isBlocking"
         static let lockedUntil = "lockedUntil"
         static let strict = "strictLevel"
         static let pinHash = "pinHash"
         static let pinSalt = "pinSalt"
         static let activeDomains = "activeDomains"
-        static let activeBlocklistID = "activeBlocklistID"
-        static let manualRunning = "manualRunning"
+        static let manualActiveIDs = "manualActiveIDs"
+        static let scheduledActiveIDs = "scheduledActiveIDs"
     }
 
-    // MARK: Active blocklist (set by a manual run OR by a schedule)
+    // MARK: Active blocklists (several can run at once)
 
-    /// Domains the tunnel should block right now. Empty = block nothing.
+    /// Domains the tunnel should block right now — the union across every
+    /// active blocklist. Empty = block nothing. Recomputed by BlockingManager.
     static var activeDomains: [String] {
         get { (d.array(forKey: Key.activeDomains) as? [String]) ?? [] }
         set { d.set(newValue, forKey: Key.activeDomains) }
     }
 
-    /// The blocklist currently enforced, if any.
-    static var activeBlocklistID: String? {
-        get { d.string(forKey: Key.activeBlocklistID) }
-        set { d.set(newValue, forKey: Key.activeBlocklistID) }
+    /// Blocklist ids the user started by hand.
+    static var manualActiveIDs: [String] {
+        get { (d.array(forKey: Key.manualActiveIDs) as? [String]) ?? [] }
+        set { d.set(newValue, forKey: Key.manualActiveIDs) }
     }
 
-    /// True when the user started a block by hand (vs. a schedule). Lets a
-    /// schedule's interval-end avoid tearing down a manual session.
-    static var manualRunning: Bool {
-        get { d.bool(forKey: Key.manualRunning) }
-        set { d.set(newValue, forKey: Key.manualRunning) }
+    /// Blocklist ids currently activated by a running schedule.
+    static var scheduledActiveIDs: [String] {
+        get { (d.array(forKey: Key.scheduledActiveIDs) as? [String]) ?? [] }
+        set { d.set(newValue, forKey: Key.scheduledActiveIDs) }
     }
+
+    /// The union of manual + scheduled active blocklist ids (de-duplicated).
+    static var activeIDs: [String] {
+        Array(Set(manualActiveIDs + scheduledActiveIDs))
+    }
+
+    /// True if anything at all is being blocked right now.
+    static var anyActive: Bool { !activeIDs.isEmpty }
 
     // MARK: Block state
-
-    static var isBlocking: Bool {
-        get { d.bool(forKey: Key.isBlocking) }
-        set { d.set(newValue, forKey: Key.isBlocking) }
-    }
 
     /// When the current hard-timer / session ends. `nil` = indefinite.
     static var lockedUntil: Date? {

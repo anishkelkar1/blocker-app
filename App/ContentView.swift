@@ -13,6 +13,9 @@ struct ContentView: View {
             PickerView()
                 .tabItem { Label("Blocklist", systemImage: "list.bullet") }
 
+            WebsiteRulesView()
+                .tabItem { Label("Websites", systemImage: "globe") }
+
             StrictModeView()
                 .tabItem { Label("Strict", systemImage: "exclamationmark.lock") }
         }

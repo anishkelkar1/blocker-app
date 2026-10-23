@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var auth: AuthorizationManager
     @EnvironmentObject var controller: BlockController
+    @EnvironmentObject var tunnel: TunnelController
 
     @State private var durationMinutes: Double = 60
     @State private var useTimer = false
@@ -59,6 +60,10 @@ struct HomeView: View {
             Text(controller.strictLevel.title)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            Label(tunnel.isActive ? "Website filter on (all browsers)" : "Website filter off",
+                  systemImage: tunnel.isActive ? "globe.badge.chevron.backward" : "globe")
+                .font(.caption)
+                .foregroundStyle(tunnel.isActive ? .green : .secondary)
         }
         .frame(maxWidth: .infinity)
         .padding()
@@ -78,6 +83,7 @@ struct HomeView: View {
             }
             Button {
                 controller.start(duration: useTimer ? durationMinutes * 60 : nil)
+                Task { await tunnel.start() } // cross-browser website filter
             } label: {
                 Text(controller.hasSelection ? "Start blocking" : "Pick a blocklist first")
                     .frame(maxWidth: .infinity)
@@ -101,6 +107,7 @@ struct HomeView: View {
     private func attemptStop(pin: String?) {
         switch controller.requestStop(pin: pin) {
         case .stopped:
+            tunnel.stop()
             pinEntry = ""
         case .needsPIN:
             if pin == nil {

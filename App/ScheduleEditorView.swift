@@ -58,10 +58,14 @@ struct ScheduleEditorView: View {
                 Section("Time") {
                     DatePicker("Start", selection: $start, displayedComponents: .hourAndMinute)
                     DatePicker("End", selection: $end, displayedComponents: .hourAndMinute)
-                    if !isSameDay {
-                        Label("End must be after start (overnight windows aren't supported yet).",
+                    if startEqualsEnd {
+                        Label("Start and end can't be the same.",
                               systemImage: "exclamationmark.triangle")
                             .font(.caption).foregroundStyle(.orange)
+                    } else if crossesMidnight {
+                        Label("Overnight — runs past midnight into the next day.",
+                              systemImage: "moon.stars")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
 
@@ -77,12 +81,14 @@ struct ScheduleEditorView: View {
         }
     }
 
-    private var isSameDay: Bool {
-        comps(end).hour! * 60 + comps(end).minute! > comps(start).hour! * 60 + comps(start).minute!
+    private func minutes(_ d: Date) -> Int {
+        let c = comps(d); return c.hour! * 60 + c.minute!
     }
+    private var startEqualsEnd: Bool { minutes(start) == minutes(end) }
+    private var crossesMidnight: Bool { minutes(end) <= minutes(start) }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && !weekdays.isEmpty && isSameDay
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && !weekdays.isEmpty && !startEqualsEnd
     }
 
     private func save() {

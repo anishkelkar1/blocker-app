@@ -1,9 +1,8 @@
 import Foundation
 
 /// A recurring block window: run `blocklistID` on the chosen weekdays between a
-/// start and end time. Same-day windows only (start < end); overnight windows
-/// that cross midnight are not supported yet (DeviceActivity treats those
-/// specially — see ScheduleManager).
+/// start and end time. Overnight windows (end earlier than start) are allowed
+/// and split across midnight by ScheduleManager. Only start == end is invalid.
 struct BlockSchedule: Identifiable, Codable, Equatable {
     var id: UUID
     var name: String
@@ -35,12 +34,19 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
     var startText: String { String(format: "%02d:%02d", startHour, startMinute) }
     var endText: String { String(format: "%02d:%02d", endHour, endMinute) }
 
-    /// True if end is strictly after start on the same day.
-    var isSameDay: Bool {
-        (endHour * 60 + endMinute) > (startHour * 60 + startMinute)
-    }
+    var startMinutes: Int { startHour * 60 + startMinute }
+    var endMinutes: Int { endHour * 60 + endMinute }
+
+    /// End is earlier than or equal to start, so the window runs past midnight.
+    var crossesMidnight: Bool { endMinutes <= startMinutes }
+
+    /// The only invalid case is a zero-length window.
+    var isValid: Bool { startMinutes != endMinutes }
 
     static let weekdaySymbols = ["", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    /// Calendar weekday after `wd` (1...7, wrapping Sat→Sun).
+    static func nextWeekday(_ wd: Int) -> Int { wd == 7 ? 1 : wd + 1 }
 
     var weekdaysText: String {
         weekdays.sorted().map { BlockSchedule.weekdaySymbols[$0] }.joined(separator: " ")

@@ -32,9 +32,14 @@ struct SchedulesView: View {
             }
             .overlay {
                 if BlocklistStore.all.isEmpty {
-                    ContentUnavailableView("Create a blocklist first",
-                                           systemImage: "list.bullet",
-                                           description: Text("Schedules run a blocklist on a timer."))
+                    VStack(spacing: 8) {
+                        Image(systemName: "list.bullet")
+                            .font(.largeTitle).foregroundStyle(.secondary)
+                        Text("Create a blocklist first").font(.headline)
+                        Text("Schedules run a blocklist on a timer.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    .padding()
                 }
             }
         }

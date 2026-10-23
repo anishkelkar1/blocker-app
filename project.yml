@@ -34,6 +34,7 @@ targets:
     dependencies:
       - target: FocusLockMonitor
       - target: FocusLockShield
+      - target: FocusLockTunnel
 
   FocusLockMonitor:
     type: app-extension
@@ -62,3 +63,17 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.shield
+
+  FocusLockTunnel:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Tunnel
+      - Shared
+    info:
+      path: Tunnel/Info.plist
+    entitlements:
+      path: Tunnel/Tunnel.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.tunnel

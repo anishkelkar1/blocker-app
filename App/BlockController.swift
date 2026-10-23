@@ -1,88 +1,69 @@
 import Foundation
-import FamilyControls
 import DeviceActivity
 
-/// The app-side view model that drives blocking. Owns the current selection
-/// and start/stop logic, and mirrors state into `SharedState` so extensions
-/// stay in sync.
+/// Drives a *manual* block run of a chosen blocklist (start now, optionally for
+/// a fixed duration). Recurring blocks are handled by schedules + the monitor
+/// extension, not here.
 @MainActor
 final class BlockController: ObservableObject {
-    @Published var selection = FamilyActivitySelection()
-    @Published var isBlocking = SharedState.isBlocking
+    @Published var selectedBlocklistID: UUID?
+    @Published var isBlocking = SharedState.manualRunning
     @Published var strictLevel = SharedState.strictLevel
     @Published var lockedUntil: Date? = SharedState.lockedUntil
 
     private let center = DeviceActivityCenter()
 
     init() {
-        if let saved = BlockingManager.shared.loadSelection() {
-            selection = saved
-        }
+        selectedBlocklistID = SharedState.activeBlocklistID.flatMap(UUID.init)
+            ?? BlocklistStore.all.first?.id
     }
 
-    var hasSelection: Bool {
-        !(selection.applicationTokens.isEmpty
-          && selection.categoryTokens.isEmpty
-          && selection.webDomainTokens.isEmpty)
-    }
-
-    /// Persist the picker result.
-    func saveSelection() {
-        BlockingManager.shared.saveSelection(selection)
+    var selectedBlocklist: Blocklist? {
+        guard let id = selectedBlocklistID else { return nil }
+        return BlocklistStore.get(id)
     }
 
     // MARK: Start
 
-    /// Start blocking. `duration == nil` blocks indefinitely until you stop.
-    /// A non-nil duration starts a timed session; with `.hardTimer` strictness
-    /// it cannot be stopped early.
+    /// Start blocking the selected blocklist now. `duration == nil` blocks until
+    /// stopped; a duration starts a timed session that ends on its own.
     func start(duration: TimeInterval?) {
-        saveSelection()
+        guard let blocklist = selectedBlocklist else { return }
 
         let until = duration.map { Date().addingTimeInterval($0) }
         SharedState.strictLevel = strictLevel
         SharedState.lockedUntil = until
+        SharedState.manualRunning = true
         SharedState.isBlocking = true
         lockedUntil = until
         isBlocking = true
 
-        BlockingManager.shared.applyShields(from: selection,
-                                            denyRemoval: strictLevel != .off)
+        BlockingManager.shared.activate(blocklist, denyRemoval: strictLevel != .off)
 
-        // If timed, register a DeviceActivity schedule so the monitor
-        // extension re-asserts at the boundaries and clears at the end even if
-        // the app is not running.
         if let until {
-            scheduleSession(until: until)
+            scheduleManualEnd(until: until)
         } else {
-            center.stopMonitoring([BlockingManager.activityName])
+            center.stopMonitoring([BlockingManager.manualActivity])
         }
     }
 
-    private func scheduleSession(until: Date) {
+    private func scheduleManualEnd(until: Date) {
         let cal = Calendar.current
-        let now = Date()
-        let start = cal.dateComponents([.hour, .minute, .second], from: now)
-        let end = cal.dateComponents([.hour, .minute, .second], from: until)
-        let schedule = DeviceActivitySchedule(intervalStart: start,
-                                              intervalEnd: end,
-                                              repeats: false)
-        do {
-            try center.startMonitoring(BlockingManager.activityName, during: schedule)
-        } catch {
-            print("startMonitoring failed: \(error)")
-        }
+        let schedule = DeviceActivitySchedule(
+            intervalStart: cal.dateComponents([.hour, .minute, .second], from: Date()),
+            intervalEnd: cal.dateComponents([.hour, .minute, .second], from: until),
+            repeats: false
+        )
+        do { try center.startMonitoring(BlockingManager.manualActivity, during: schedule) }
+        catch { print("manual startMonitoring failed: \(error)") }
     }
 
     // MARK: Stop
 
     enum StopResult { case stopped, needsPIN, hardLocked }
 
-    /// Attempt to stop. Honors the strict level.
     func requestStop(pin: String? = nil) -> StopResult {
-        if SharedState.isHardLocked {
-            return .hardLocked
-        }
+        if SharedState.isHardLocked { return .hardLocked }
         if strictLevel == .pinGated, SharedState.hasPIN {
             guard let pin, PINCrypto.verify(pin) else { return .needsPIN }
         }
@@ -91,18 +72,17 @@ final class BlockController: ObservableObject {
     }
 
     private func forceStop() {
-        BlockingManager.shared.clearAll()
-        center.stopMonitoring([BlockingManager.activityName])
-        SharedState.isBlocking = false
+        center.stopMonitoring([BlockingManager.manualActivity])
+        BlockingManager.shared.deactivate()
+        SharedState.manualRunning = false
         SharedState.lockedUntil = nil
+        SharedState.isBlocking = false
         isBlocking = false
         lockedUntil = nil
     }
 
-    /// Re-sync published values from shared storage (e.g. after returning to
-    /// foreground, in case the monitor extension changed them).
     func refresh() {
-        isBlocking = SharedState.isBlocking
+        isBlocking = SharedState.manualRunning
         strictLevel = SharedState.strictLevel
         lockedUntil = SharedState.lockedUntil
     }

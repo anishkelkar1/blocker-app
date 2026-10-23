@@ -10,17 +10,18 @@ struct HomeView: View {
     @State private var showPINPrompt = false
     @State private var pinEntry = ""
     @State private var stopError: String?
+    @State private var blocklists: [Blocklist] = BlocklistStore.all
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     AuthBanner()
-
                     statusCard
-
                     if controller.isBlocking {
                         stopControls
+                    } else if blocklists.isEmpty {
+                        emptyHint
                     } else {
                         startControls
                     }
@@ -28,23 +29,23 @@ struct HomeView: View {
                 .padding()
             }
             .navigationTitle("FocusLock")
-            .onAppear { controller.refresh() }
+            .onAppear {
+                controller.refresh()
+                blocklists = BlocklistStore.all
+                if controller.selectedBlocklistID == nil {
+                    controller.selectedBlocklistID = blocklists.first?.id
+                }
+            }
             .alert("Enter PIN to stop", isPresented: $showPINPrompt) {
-                SecureField("PIN", text: $pinEntry)
-                    .keyboardType(.numberPad)
+                SecureField("PIN", text: $pinEntry).keyboardType(.numberPad)
                 Button("Stop", role: .destructive) { attemptStop(pin: pinEntry) }
                 Button("Cancel", role: .cancel) { pinEntry = "" }
             }
-            .alert("Can't stop yet",
-                   isPresented: .constant(stopError != nil)) {
+            .alert("Can't stop yet", isPresented: .constant(stopError != nil)) {
                 Button("OK") { stopError = nil }
-            } message: {
-                Text(stopError ?? "")
-            }
+            } message: { Text(stopError ?? "") }
         }
     }
-
-    // MARK: Status
 
     private var statusCard: some View {
         VStack(spacing: 8) {
@@ -57,9 +58,7 @@ struct HomeView: View {
                 Text("Ends \(until.formatted(date: .omitted, time: .shortened))")
                     .foregroundStyle(.secondary)
             }
-            Text(controller.strictLevel.title)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            Text(controller.strictLevel.title).font(.footnote).foregroundStyle(.secondary)
             Label(tunnel.isActive ? "Website filter on (all browsers)" : "Website filter off",
                   systemImage: tunnel.isActive ? "globe.badge.chevron.backward" : "globe")
                 .font(.caption)
@@ -70,10 +69,21 @@ struct HomeView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: Start
+    private var emptyHint: some View {
+        VStack(spacing: 8) {
+            Text("No blocklists yet.").font(.headline)
+            Text("Create one in the Blocklists tab, then start it here or schedule it.")
+                .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+    }
 
     private var startControls: some View {
         VStack(spacing: 16) {
+            Picker("Blocklist", selection: $controller.selectedBlocklistID) {
+                ForEach(blocklists) { Text($0.name).tag(Optional($0.id)) }
+            }
+            .pickerStyle(.menu)
+
             Toggle("Timed session", isOn: $useTimer)
             if useTimer {
                 VStack(alignment: .leading) {
@@ -81,19 +91,17 @@ struct HomeView: View {
                     Slider(value: $durationMinutes, in: 5...480, step: 5)
                 }
             }
+
             Button {
                 controller.start(duration: useTimer ? durationMinutes * 60 : nil)
-                Task { await tunnel.start() } // cross-browser website filter
+                Task { await tunnel.start() }
             } label: {
-                Text(controller.hasSelection ? "Start blocking" : "Pick a blocklist first")
-                    .frame(maxWidth: .infinity)
+                Text("Start blocking").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(!controller.hasSelection)
+            .disabled(controller.selectedBlocklistID == nil)
         }
     }
-
-    // MARK: Stop
 
     private var stopControls: some View {
         Button(role: .destructive) {
@@ -110,12 +118,8 @@ struct HomeView: View {
             tunnel.stop()
             pinEntry = ""
         case .needsPIN:
-            if pin == nil {
-                showPINPrompt = true
-            } else {
-                stopError = "Wrong PIN."
-                pinEntry = ""
-            }
+            if pin == nil { showPINPrompt = true }
+            else { stopError = "Wrong PIN."; pinEntry = "" }
         case .hardLocked:
             stopError = "This session is locked until the timer ends. The PIN can't override a hard timer."
         }

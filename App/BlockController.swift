@@ -1,44 +1,34 @@
 import Foundation
 import DeviceActivity
 
-/// Drives a *manual* block run of a chosen blocklist (start now, optionally for
-/// a fixed duration). Recurring blocks are handled by schedules + the monitor
-/// extension, not here.
+/// Drives *manual* block runs. The user can select one or more blocklists and
+/// start them now (optionally for a fixed duration). Schedules add their own
+/// blocklists on top; the enforced block is always the union.
 @MainActor
 final class BlockController: ObservableObject {
-    @Published var selectedBlocklistID: UUID?
-    @Published var isBlocking = SharedState.manualRunning
+    /// Blocklists the user has ticked to run in a manual session.
+    @Published var selectedBlocklistIDs: Set<UUID> = Set(
+        SharedState.manualActiveIDs.compactMap(UUID.init)
+    )
+    @Published var isManualRunning = !SharedState.manualActiveIDs.isEmpty
     @Published var strictLevel = SharedState.strictLevel
     @Published var lockedUntil: Date? = SharedState.lockedUntil
 
     private let center = DeviceActivityCenter()
 
-    init() {
-        selectedBlocklistID = SharedState.activeBlocklistID.flatMap(UUID.init)
-            ?? BlocklistStore.all.first?.id
-    }
-
-    var selectedBlocklist: Blocklist? {
-        guard let id = selectedBlocklistID else { return nil }
-        return BlocklistStore.get(id)
-    }
-
     // MARK: Start
 
-    /// Start blocking the selected blocklist now. `duration == nil` blocks until
-    /// stopped; a duration starts a timed session that ends on its own.
+    /// Start the selected blocklists now. `duration == nil` runs until stopped.
     func start(duration: TimeInterval?) {
-        guard let blocklist = selectedBlocklist else { return }
+        guard !selectedBlocklistIDs.isEmpty else { return }
 
         let until = duration.map { Date().addingTimeInterval($0) }
         SharedState.strictLevel = strictLevel
         SharedState.lockedUntil = until
-        SharedState.manualRunning = true
-        SharedState.isBlocking = true
         lockedUntil = until
-        isBlocking = true
 
-        BlockingManager.shared.activate(blocklist, denyRemoval: strictLevel != .off)
+        BlockingManager.shared.startManual(Array(selectedBlocklistIDs))
+        isManualRunning = true
 
         if let until {
             scheduleManualEnd(until: until)
@@ -73,17 +63,16 @@ final class BlockController: ObservableObject {
 
     private func forceStop() {
         center.stopMonitoring([BlockingManager.manualActivity])
-        BlockingManager.shared.deactivate()
-        SharedState.manualRunning = false
+        BlockingManager.shared.stopManual()
         SharedState.lockedUntil = nil
-        SharedState.isBlocking = false
-        isBlocking = false
+        isManualRunning = false
         lockedUntil = nil
     }
 
     func refresh() {
-        isBlocking = SharedState.manualRunning
+        isManualRunning = !SharedState.manualActiveIDs.isEmpty
         strictLevel = SharedState.strictLevel
         lockedUntil = SharedState.lockedUntil
+        selectedBlocklistIDs.formUnion(SharedState.manualActiveIDs.compactMap(UUID.init))
     }
 }

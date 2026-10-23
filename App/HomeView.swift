@@ -12,13 +12,15 @@ struct HomeView: View {
     @State private var stopError: String?
     @State private var blocklists: [Blocklist] = BlocklistStore.all
 
+    private var scheduledCount: Int { SharedState.scheduledActiveIDs.count }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     AuthBanner()
                     statusCard
-                    if controller.isBlocking {
+                    if controller.isManualRunning {
                         stopControls
                     } else if blocklists.isEmpty {
                         emptyHint
@@ -32,9 +34,6 @@ struct HomeView: View {
             .onAppear {
                 controller.refresh()
                 blocklists = BlocklistStore.all
-                if controller.selectedBlocklistID == nil {
-                    controller.selectedBlocklistID = blocklists.first?.id
-                }
             }
             .alert("Enter PIN to stop", isPresented: $showPINPrompt) {
                 SecureField("PIN", text: $pinEntry).keyboardType(.numberPad)
@@ -49,16 +48,18 @@ struct HomeView: View {
 
     private var statusCard: some View {
         VStack(spacing: 8) {
-            Image(systemName: controller.isBlocking ? "lock.fill" : "lock.open")
+            Image(systemName: SharedState.anyActive ? "lock.fill" : "lock.open")
                 .font(.system(size: 44))
-                .foregroundStyle(controller.isBlocking ? .green : .secondary)
-            Text(controller.isBlocking ? "Blocking active" : "Not blocking")
+                .foregroundStyle(SharedState.anyActive ? .green : .secondary)
+            Text(SharedState.anyActive ? "Blocking active" : "Not blocking")
                 .font(.title2.bold())
+            Text("\(SharedState.activeIDs.count) blocklist(s) active"
+                 + (scheduledCount > 0 ? " · \(scheduledCount) by schedule" : ""))
+                .font(.footnote).foregroundStyle(.secondary)
             if let until = controller.lockedUntil {
-                Text("Ends \(until.formatted(date: .omitted, time: .shortened))")
-                    .foregroundStyle(.secondary)
+                Text("Manual session ends \(until.formatted(date: .omitted, time: .shortened))")
+                    .font(.footnote).foregroundStyle(.secondary)
             }
-            Text(controller.strictLevel.title).font(.footnote).foregroundStyle(.secondary)
             Label(tunnel.isActive ? "Website filter on (all browsers)" : "Website filter off",
                   systemImage: tunnel.isActive ? "globe.badge.chevron.backward" : "globe")
                 .font(.caption)
@@ -72,17 +73,32 @@ struct HomeView: View {
     private var emptyHint: some View {
         VStack(spacing: 8) {
             Text("No blocklists yet.").font(.headline)
-            Text("Create one in the Blocklists tab, then start it here or schedule it.")
+            Text("Create one in the Blocklists tab, then run it here or schedule it.")
                 .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }
     }
 
     private var startControls: some View {
         VStack(spacing: 16) {
-            Picker("Blocklist", selection: $controller.selectedBlocklistID) {
-                ForEach(blocklists) { Text($0.name).tag(Optional($0.id)) }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Run which blocklists?").font(.headline)
+                ForEach(blocklists) { list in
+                    let on = controller.selectedBlocklistIDs.contains(list.id)
+                    Button {
+                        if on { controller.selectedBlocklistIDs.remove(list.id) }
+                        else { controller.selectedBlocklistIDs.insert(list.id) }
+                    } label: {
+                        HStack {
+                            Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(on ? Color.accentColor : .secondary)
+                            Text(list.name)
+                            Spacer()
+                        }
+                    }
+                    .tint(.primary)
+                }
             }
-            .pickerStyle(.menu)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Toggle("Timed session", isOn: $useTimer)
             if useTimer {
@@ -99,7 +115,7 @@ struct HomeView: View {
                 Text("Start blocking").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(controller.selectedBlocklistID == nil)
+            .disabled(controller.selectedBlocklistIDs.isEmpty)
         }
     }
 
@@ -107,7 +123,7 @@ struct HomeView: View {
         Button(role: .destructive) {
             attemptStop(pin: nil)
         } label: {
-            Text("Stop blocking").frame(maxWidth: .infinity)
+            Text("Stop manual block").frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
     }
@@ -115,7 +131,7 @@ struct HomeView: View {
     private func attemptStop(pin: String?) {
         switch controller.requestStop(pin: pin) {
         case .stopped:
-            tunnel.stop()
+            if SharedState.scheduledActiveIDs.isEmpty { tunnel.stop() }
             pinEntry = ""
         case .needsPIN:
             if pin == nil { showPINPrompt = true }

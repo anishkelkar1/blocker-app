@@ -88,8 +88,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             using: .udp
         )
         conn.start(queue: .global())
-        conn.send(content: request.payload, completion: .contentProcessed { _ in
-            conn.receiveMessage { [weak self] data, _, _, _ in
+        conn.send(content: request.payload, completion: .contentProcessed { [weak self] _ in
+            conn.receiveMessage { data, _, _, _ in
                 if let data, let self {
                     let reply = request.makeReply(responsePayload: data)
                     self.packetFlow.writePackets([reply], withProtocols: [NSNumber(value: AF_INET)])

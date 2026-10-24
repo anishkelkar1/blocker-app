@@ -1,5 +1,5 @@
 import Foundation
-import NetworkExtension
+@preconcurrency import NetworkExtension
 
 /// App-side control of the DNS-filtering packet tunnel. Installs/updates the
 /// VPN configuration (the user approves it once in a system prompt) and starts

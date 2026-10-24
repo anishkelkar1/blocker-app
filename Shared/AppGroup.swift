@@ -10,7 +10,7 @@ import ManagedSettings
 /// same saved selection and the same ManagedSettings store.
 enum AppGroup {
     /// App Group container id. Must match all `.entitlements` files.
-    static let id = "group.com.example.focuslock"
+    static let id = "group.com.anishkelkar.focuslock"
 
     /// Named ManagedSettings store. App and extensions target the same name
     /// so shields applied in one process are visible to the others.

@@ -1,6 +1,6 @@
 name: FocusLock
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.anishkelkar
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
@@ -44,10 +44,10 @@ targets:
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider
         com.apple.security.application-groups:
-          - group.com.example.focuslock
+          - group.com.anishkelkar.focuslock
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock
+        PRODUCT_BUNDLE_IDENTIFIER: com.anishkelkar.focuslock
         ENABLE_USER_SCRIPT_SANDBOXING: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
@@ -72,10 +72,10 @@ targets:
       properties:
         com.apple.developer.family-controls: true
         com.apple.security.application-groups:
-          - group.com.example.focuslock
+          - group.com.anishkelkar.focuslock
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.monitor
+        PRODUCT_BUNDLE_IDENTIFIER: com.anishkelkar.focuslock.monitor
 
   FocusLockShield:
     type: app-extension
@@ -94,10 +94,10 @@ targets:
       properties:
         com.apple.developer.family-controls: true
         com.apple.security.application-groups:
-          - group.com.example.focuslock
+          - group.com.anishkelkar.focuslock
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.shield
+        PRODUCT_BUNDLE_IDENTIFIER: com.anishkelkar.focuslock.shield
 
   FocusLockTunnel:
     type: app-extension
@@ -117,7 +117,7 @@ targets:
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider
         com.apple.security.application-groups:
-          - group.com.example.focuslock
+          - group.com.anishkelkar.focuslock
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.tunnel
+        PRODUCT_BUNDLE_IDENTIFIER: com.anishkelkar.focuslock.tunnel

@@ -9,7 +9,7 @@ final class TunnelController: ObservableObject {
     @Published var status: NEVPNStatus = .invalid
 
     /// Must match the Tunnel extension's bundle identifier.
-    private let providerBundleID = "com.example.focuslock.tunnel"
+    private let providerBundleID = "com.anishkelkar.focuslock.tunnel"
     private var manager: NETunnelProviderManager?
     private var observer: NSObjectProtocol?
 

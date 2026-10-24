@@ -18,7 +18,7 @@ struct StrictModeView: View {
                         }
                     }
                     .pickerStyle(.inline)
-                    .onChange(of: level) { _, new in
+                    .onChange(of: level) { new in
                         SharedState.strictLevel = new
                         controller.strictLevel = new
                     }

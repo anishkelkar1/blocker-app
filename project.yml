@@ -15,6 +15,10 @@ settings:
     DEVELOPMENT_TEAM: ""
     SWIFT_VERSION: "5.0"
 
+# XcodeGen regenerates every Info.plist and .entitlements file listed below
+# from these `properties` on each `xcodegen generate`, so the capabilities and
+# extension declarations live here as the single source of truth. Editing the
+# generated files directly would be overwritten on the next generate.
 targets:
   FocusLock:
     type: application
@@ -24,12 +28,24 @@ targets:
       - Shared
     info:
       path: App/Info.plist
+      properties:
+        CFBundleDisplayName: FocusLock
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
     entitlements:
       path: App/FocusLock.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.developer.networking.networkextension:
+          - packet-tunnel-provider
+        com.apple.security.application-groups:
+          - group.com.example.focuslock
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock
-        INFOPLIST_KEY_CFBundleDisplayName: FocusLock
         ENABLE_USER_SCRIPT_SANDBOXING: YES
     dependencies:
       - target: FocusLockMonitor
@@ -50,6 +66,10 @@ targets:
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).DeviceActivityMonitorExtension
     entitlements:
       path: Monitor/Monitor.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.example.focuslock
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.monitor
@@ -68,6 +88,10 @@ targets:
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShieldConfigurationExtension
     entitlements:
       path: Shield/Shield.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.example.focuslock
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.shield
@@ -86,6 +110,11 @@ targets:
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
     entitlements:
       path: Tunnel/Tunnel.entitlements
+      properties:
+        com.apple.developer.networking.networkextension:
+          - packet-tunnel-provider
+        com.apple.security.application-groups:
+          - group.com.example.focuslock
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.focuslock.tunnel

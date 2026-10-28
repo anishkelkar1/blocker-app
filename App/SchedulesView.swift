@@ -15,7 +15,7 @@ struct SchedulesView: View {
                     Button { editing = schedule } label: { row(schedule) }
                         .tint(.primary)
                         .card()
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                         .swipeActions(edge: .trailing) {
@@ -81,13 +81,20 @@ struct SchedulesView: View {
     }
 
     /// Green ON while the schedule's window covers now, red OFF otherwise.
+    /// ON is a green-outlined pill with green text; OFF is a filled red pill.
     private func statusBadge(_ on: Bool) -> some View {
         Text(on ? "ON" : "OFF")
             .font(.caption.weight(.bold))
-            .foregroundStyle(.white)
+            .foregroundStyle(on ? Color.green : .white)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(on ? Color.green : Color.red, in: Capsule())
+            .background {
+                if on {
+                    Capsule().stroke(Color.green, lineWidth: 1.5)
+                } else {
+                    Capsule().fill(Color.red)
+                }
+            }
     }
 
     private func addNew() {

@@ -37,6 +37,7 @@ enum SharedState {
         static let activeDomains = "activeDomains"
         static let manualActiveIDs = "manualActiveIDs"
         static let scheduledActiveIDs = "scheduledActiveIDs"
+        static let denyAppRemoval = "denyAppRemoval"
     }
 
     // MARK: Active blocklists (several can run at once)
@@ -79,6 +80,14 @@ enum SharedState {
     static var strictLevel: StrictLevel {
         get { StrictLevel(rawValue: d.string(forKey: Key.strict) ?? "") ?? .off }
         set { d.set(newValue.rawValue, forKey: Key.strict) }
+    }
+
+    /// Whether FocusLock should keep itself from being deleted (ManagedSettings
+    /// `denyAppRemoval`). Set by the "Can't-delete lock" toggle and re-applied
+    /// whenever the managed store is reconfigured, independent of any session.
+    static var denyAppRemoval: Bool {
+        get { d.bool(forKey: Key.denyAppRemoval) }
+        set { d.set(newValue, forKey: Key.denyAppRemoval) }
     }
 
     // MARK: PIN (salted SHA-256; the plain PIN is never stored)

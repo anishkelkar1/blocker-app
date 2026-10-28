@@ -9,6 +9,7 @@ struct BlocklistEditorView: View {
     @State private var name: String
     @State private var selection: FamilyActivitySelection
     @State private var domains: [String]
+    @State private var blockAdult: Bool
     @State private var newDomain = ""
     @State private var pickerPresented = false
 
@@ -18,6 +19,7 @@ struct BlocklistEditorView: View {
         id = blocklist.id
         _name = State(initialValue: blocklist.name)
         _domains = State(initialValue: blocklist.domains)
+        _blockAdult = State(initialValue: blocklist.blockAdult)
         _selection = State(initialValue:
             BlockingManager.shared.decodeSelection(blocklist.selectionData) ?? FamilyActivitySelection())
     }
@@ -56,6 +58,12 @@ struct BlocklistEditorView: View {
                 } footer: {
                     Text("Enforced by the DNS filter in every browser. Host level only — a bare word matches any host containing it.")
                 }
+
+                Section {
+                    Toggle("Block adult sites", isOn: $blockAdult)
+                } footer: {
+                    Text("Also blocks a built-in list of popular adult sites via the website filter. Not exhaustive — add specific sites above too. A browser with its own encrypted DNS (e.g. Firefox) needs the app itself blocked.")
+                }
             }
             .navigationTitle("Blocklist")
             .familyActivityPicker(isPresented: $pickerPresented, selection: $selection)
@@ -80,7 +88,7 @@ struct BlocklistEditorView: View {
     private func save() {
         let list = Blocklist(id: id, name: name,
                              selectionData: BlockingManager.shared.encodeSelection(selection),
-                             domains: domains)
+                             domains: domains, blockAdult: blockAdult)
         BlocklistStore.upsert(list)
         dismiss()
     }

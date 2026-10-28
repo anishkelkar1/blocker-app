@@ -9,12 +9,32 @@ struct Blocklist: Identifiable, Codable, Equatable {
     var name: String
     var selectionData: Data?
     var domains: [String]
+    /// When true, also block a built-in list of popular adult sites
+    /// (`AdultDomains.list`) through the website filter.
+    var blockAdult: Bool
 
-    init(id: UUID = UUID(), name: String, selectionData: Data? = nil, domains: [String] = []) {
+    init(id: UUID = UUID(), name: String, selectionData: Data? = nil,
+         domains: [String] = [], blockAdult: Bool = false) {
         self.id = id
         self.name = name
         self.selectionData = selectionData
         self.domains = domains
+        self.blockAdult = blockAdult
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, selectionData, domains, blockAdult
+    }
+
+    /// Custom decoder so blocklists saved before `blockAdult` existed still load
+    /// (the flag defaults to false when the key is missing).
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        selectionData = try c.decodeIfPresent(Data.self, forKey: .selectionData)
+        domains = try c.decode([String].self, forKey: .domains)
+        blockAdult = try c.decodeIfPresent(Bool.self, forKey: .blockAdult) ?? false
     }
 }
 

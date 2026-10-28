@@ -72,12 +72,13 @@ public final class BlockingManager {
                 webs.formUnion(selection.webDomainTokens)
             }
             domains.append(contentsOf: blocklist.domains)
+            if blocklist.blockAdult { domains.append(contentsOf: AdultDomains.list) }
         }
 
         store.shield.applications = apps.isEmpty ? nil : apps
         store.shield.applicationCategories = categories.isEmpty ? nil : .specific(categories)
         store.shield.webDomains = webs.isEmpty ? nil : webs
-        setAppRemoval(denied: SharedState.strictLevel != .off)
+        setAppRemoval(denied: SharedState.denyAppRemoval)
         SharedState.activeDomains = Array(Set(domains))
     }
 
@@ -85,7 +86,8 @@ public final class BlockingManager {
 
     public func clearAll() {
         store.clearAllSettings()
-        setAppRemoval(denied: false)
+        // Keep the can't-delete lock applied even when nothing else is active.
+        setAppRemoval(denied: SharedState.denyAppRemoval)
     }
 
     /// Toggle the "can't delete this app" restriction. Not guaranteed under

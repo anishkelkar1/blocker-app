@@ -37,6 +37,7 @@ final class ScheduleManager: ObservableObject {
                 }
             }
         }
+        reconcileScheduledActive()
     }
 
     private func register(_ name: String,
@@ -54,5 +55,17 @@ final class ScheduleManager: ObservableObject {
     func stopAll() {
         let existing = center.activities.filter { $0.rawValue.hasPrefix("sch.") }
         if !existing.isEmpty { center.stopMonitoring(existing) }
+    }
+
+    /// Recompute which blocklists are active by schedule right now, straight from
+    /// the schedule windows, and re-apply. Fixes a stale "running" state left
+    /// behind when a DeviceActivity end callback didn't fire (the window ended
+    /// while the app was closed, or a schedule changed).
+    func reconcileScheduledActive() {
+        let active = ScheduleStore.all
+            .filter { $0.isActiveNow }
+            .flatMap { $0.blocklistIDs.map(\.uuidString) }
+        SharedState.scheduledActiveIDs = Array(Set(active))
+        BlockingManager.shared.recompute()
     }
 }

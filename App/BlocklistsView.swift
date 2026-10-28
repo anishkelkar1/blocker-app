@@ -27,6 +27,12 @@ struct BlocklistsView: View {
                 }
             }
             .navigationTitle("Blocklists")
+            .onAppear {
+                // Clear any stale scheduled-active state so the "running" badge
+                // reflects only schedules actually in their window right now.
+                ScheduleManager.shared.reconcileScheduledActive()
+                blocklists = BlocklistStore.all
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

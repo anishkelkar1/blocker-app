@@ -13,6 +13,7 @@ struct BlocklistEditorView: View {
     @State private var blockFoodDelivery: Bool
     @State private var newDomain = ""
     @State private var pickerPresented = false
+    @State private var showAppRemovalBlocked = false
 
     private let id: UUID
     private let originalBlockAdult: Bool
@@ -55,7 +56,6 @@ struct BlocklistEditorView: View {
                     } label: {
                         Label("Choose apps & categories", systemImage: "square.grid.2x2")
                     }
-                    .disabled(isActive)
                     LabeledContent("Apps", value: "\(selection.applicationTokens.count)")
                     LabeledContent("Categories", value: "\(selection.categoryTokens.count)")
                     LabeledContent("Safari sites", value: "\(selection.webDomainTokens.count)")
@@ -63,7 +63,7 @@ struct BlocklistEditorView: View {
                     Text("Apps & categories")
                 } footer: {
                     if isActive {
-                        Text("Apps are locked while this blocklist is running. Stop it to change them.")
+                        Text("While running you can add apps, but removing one is refused until you stop the block.")
                     }
                 }
 
@@ -95,6 +95,11 @@ struct BlocklistEditorView: View {
             }
             .navigationTitle("Blocklist")
             .familyActivityPicker(isPresented: $pickerPresented, selection: $selection)
+            .alert("Can't remove apps while running", isPresented: $showAppRemovalBlocked) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("While this blocklist is running you can only add apps. Re-add the one you removed, or stop the block to change the selection.")
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -121,22 +126,27 @@ struct BlocklistEditorView: View {
         var finalDomains = domains
         var finalAdult = blockAdult
         var finalFood = blockFoodDelivery
-        var finalSelectionData = BlockingManager.shared.encodeSelection(selection)
 
         // Ratchet: while this blocklist is running, edits may only ADD blocks.
-        // Union domains with what's stored so removals are ignored, keep the
-        // category toggles on if they were on, and keep the enforced app
-        // selection unchanged (the picker is locked while active, since Screen
-        // Time selections can't be safely merged).
         if isActive, let current = BlocklistStore.get(id) {
+            // Apps/categories: the new selection must be a superset of the one
+            // already in force — additions are fine, a removal is refused (Screen
+            // Time selections can't be merged, so we validate rather than merge).
+            let currentSel = BlockingManager.shared.decodeSelection(current.selectionData)
+                ?? FamilyActivitySelection()
+            let addOnly = currentSel.applicationTokens.isSubset(of: selection.applicationTokens)
+                && currentSel.categoryTokens.isSubset(of: selection.categoryTokens)
+                && currentSel.webDomainTokens.isSubset(of: selection.webDomainTokens)
+            guard addOnly else { showAppRemovalBlocked = true; return }
+
+            // Domains and category toggles: union so removals are ignored.
             finalDomains = Array(Set(current.domains).union(finalDomains))
             finalAdult = current.blockAdult || finalAdult
             finalFood = current.blockFoodDelivery || finalFood
-            finalSelectionData = current.selectionData
         }
 
         let list = Blocklist(id: id, name: name,
-                             selectionData: finalSelectionData,
+                             selectionData: BlockingManager.shared.encodeSelection(selection),
                              domains: finalDomains, blockAdult: finalAdult,
                              blockFoodDelivery: finalFood)
         BlocklistStore.upsert(list)

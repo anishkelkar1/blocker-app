@@ -12,11 +12,11 @@ struct BlocklistsView: View {
                     Button {
                         editing = list
                     } label: {
-                        VStack(alignment: .leading, spacing: 2) {
+                        HStack {
                             Text(list.name).font(.headline)
-                            Text(summary(list)).font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            statusBadge(SharedState.activeIDs.contains(list.id.uuidString))
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .tint(.primary)
                     .card()
@@ -54,12 +54,21 @@ struct BlocklistsView: View {
         }
     }
 
-    private func summary(_ list: Blocklist) -> String {
-        var parts = ["\(list.domains.count) site rule(s)"]
-        if list.blockAdult { parts.append("adult") }
-        if list.blockFoodDelivery { parts.append("food delivery") }
-        if SharedState.activeIDs.contains(list.id.uuidString) { parts.append("running") }
-        return parts.joined(separator: " · ")
+    /// Green outlined "Active" while the blocklist is being enforced (manually or
+    /// by a schedule), red filled "Not Active" otherwise.
+    private func statusBadge(_ active: Bool) -> some View {
+        Text(active ? "Active" : "Not Active")
+            .font(.caption.weight(.bold))
+            .foregroundStyle(active ? Color.green : .white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background {
+                if active {
+                    Capsule().stroke(Color.green, lineWidth: 1.5)
+                } else {
+                    Capsule().fill(Color.red)
+                }
+            }
     }
 
     private func reload() { blocklists = BlocklistStore.all }

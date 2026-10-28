@@ -14,6 +14,11 @@ struct FocusLockApp: App {
                 .environmentObject(controller)
                 .environmentObject(tunnel)
                 .task {
+                    // The can't-delete lock was removed (iOS can only block
+                    // deleting *every* app, not just this one). Clear it on
+                    // launch so any device that still has it on is unlocked.
+                    SharedState.denyAppRemoval = false
+                    BlockingManager.shared.setAppRemoval(denied: false)
                     auth.refresh()
                     await tunnel.load()
                     ScheduleManager.shared.refreshAll()

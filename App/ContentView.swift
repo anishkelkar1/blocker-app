@@ -21,9 +21,6 @@ struct ContentView: View {
 
             SchedulesView()
                 .tabItem { Label("Schedules", systemImage: "calendar") }
-
-            StrictModeView()
-                .tabItem { Label("Strict", systemImage: "exclamationmark.lock") }
         }
         .tint(Theme.navy)
         .roundedFont()

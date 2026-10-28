@@ -4,6 +4,7 @@ import SwiftUI
 struct BlocklistsView: View {
     @State private var blocklists: [Blocklist] = BlocklistStore.all
     @State private var editing: Blocklist?
+    @State private var showDeleteBlocked = false
 
     var body: some View {
         NavigationStack {
@@ -23,8 +24,14 @@ struct BlocklistsView: View {
                     .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            tryDelete(list)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
-                .onDelete(perform: delete)
 
                 if blocklists.isEmpty {
                     Text("No blocklists yet. Tap + to create one.")
@@ -35,6 +42,11 @@ struct BlocklistsView: View {
             }
             .focusLockScreen()
             .navigationTitle("Blocklists")
+            .alert("Can't delete this blocklist", isPresented: $showDeleteBlocked) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("This blocklist is active right now. You can delete it once it stops running.")
+            }
             .onAppear {
                 // Clear any stale scheduled-active state so the "running" badge
                 // reflects only schedules actually in their window right now.
@@ -73,13 +85,14 @@ struct BlocklistsView: View {
 
     private func reload() { blocklists = BlocklistStore.all }
 
-    /// Won't delete a blocklist that's currently running — that would remove
-    /// blocks already in force. Stop it first.
-    private func delete(at offsets: IndexSet) {
-        let active = Set(SharedState.activeIDs)
-        for i in offsets where !active.contains(blocklists[i].id.uuidString) {
-            BlocklistStore.remove(blocklists[i].id)
+    /// A blocklist can't be deleted while it's active (running manually or by a
+    /// schedule) — that would lift a block in force. Stop it first.
+    private func tryDelete(_ list: Blocklist) {
+        guard !SharedState.activeIDs.contains(list.id.uuidString) else {
+            showDeleteBlocked = true
+            return
         }
+        BlocklistStore.remove(list.id)
         reload()
     }
 }

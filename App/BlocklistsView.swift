@@ -16,14 +16,21 @@ struct BlocklistsView: View {
                             Text(list.name).font(.headline)
                             Text(summary(list)).font(.caption).foregroundStyle(.secondary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .tint(.primary)
+                    .card()
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
                 .onDelete(perform: delete)
 
                 if blocklists.isEmpty {
                     Text("No blocklists yet. Tap + to create one.")
                         .foregroundStyle(.secondary)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
             }
             .focusLockScreen()

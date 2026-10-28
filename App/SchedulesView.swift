@@ -14,6 +14,10 @@ struct SchedulesView: View {
                 ForEach(schedules) { schedule in
                     Button { editing = schedule } label: { row(schedule) }
                         .tint(.primary)
+                        .card()
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
                                 tryDelete(schedule)
@@ -26,6 +30,8 @@ struct SchedulesView: View {
                 if schedules.isEmpty {
                     Text("No schedules yet. Tap + to add one.")
                         .foregroundStyle(.secondary)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
             }
             .focusLockScreen()
@@ -67,22 +73,21 @@ struct SchedulesView: View {
     }
 
     private func row(_ s: BlockSchedule) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(s.name).font(.headline)
-                Spacer()
-                if s.isActiveNow {
-                    Text("running").font(.caption).foregroundStyle(.green)
-                }
-            }
-            Text("\(blocklistNames(s)) · \(s.weekdaysText) · \(s.windowText)")
-                .font(.caption).foregroundStyle(.secondary)
+        HStack {
+            Text(s.name).font(.headline)
+            Spacer()
+            statusBadge(s.isActiveNow)
         }
     }
 
-    private func blocklistNames(_ s: BlockSchedule) -> String {
-        let names = s.blocklistIDs.compactMap { BlocklistStore.get($0)?.name }
-        return names.isEmpty ? "—" : names.joined(separator: ", ")
+    /// Green ON while the schedule's window covers now, red OFF otherwise.
+    private func statusBadge(_ on: Bool) -> some View {
+        Text(on ? "ON" : "OFF")
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(on ? Color.green : Color.red, in: Capsule())
     }
 
     private func addNew() {

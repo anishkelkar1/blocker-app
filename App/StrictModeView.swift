@@ -35,8 +35,8 @@ struct StrictModeView: View {
                     Text("Can't-delete lock")
                 }
             }
-            .navigationTitle("Strict mode")
             .focusLockScreen()
+            .navigationTitle("Strict mode")
             .onAppear { denyRemoval = SharedState.denyAppRemoval }
             .alert("Prevent deleting FocusLock?", isPresented: $showConfirm) {
                 Button("Cancel", role: .cancel) { }

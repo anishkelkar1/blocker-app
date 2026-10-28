@@ -21,20 +21,14 @@ enum Theme {
         let bg = UIColor(Theme.background)
         let titleColor = UIColor(Theme.navyDeep)
 
+        // Transparent bar so the silver page shows through it (each screen's
+        // content extends under the bar). An opaque bar here hid the large title.
         let nav = UINavigationBarAppearance()
-        nav.configureWithOpaqueBackground()
-        nav.backgroundColor = bg
+        nav.configureWithTransparentBackground()
+        nav.backgroundColor = .clear
         nav.shadowColor = .clear
-        var title: [NSAttributedString.Key: Any] = [.foregroundColor: titleColor]
-        var large: [NSAttributedString.Key: Any] = [.foregroundColor: titleColor]
-        if let d = UIFont.systemFont(ofSize: 17, weight: .bold).fontDescriptor.withDesign(.rounded) {
-            title[.font] = UIFont(descriptor: d, size: 17)
-        }
-        if let d = UIFont.systemFont(ofSize: 34, weight: .bold).fontDescriptor.withDesign(.rounded) {
-            large[.font] = UIFont(descriptor: d, size: 34)
-        }
-        nav.titleTextAttributes = title
-        nav.largeTitleTextAttributes = large
+        nav.titleTextAttributes = [.foregroundColor: titleColor]
+        nav.largeTitleTextAttributes = [.foregroundColor: titleColor]
         UINavigationBar.appearance().standardAppearance = nav
         UINavigationBar.appearance().scrollEdgeAppearance = nav
         UINavigationBar.appearance().compactAppearance = nav
@@ -53,10 +47,12 @@ extension View {
     /// Pale silver page background behind a scrolling screen, with a matching
     /// navigation bar. Apply to the Form / List / ScrollView of every page.
     func focusLockScreen() -> some View {
+        // Silver page behind the scrolling content. The navigation bar itself is
+        // styled globally in Theme.configureBars(); forcing a toolbar background
+        // here suppressed the large title, so we leave the bar to the global
+        // appearance.
         self.scrollContentBackground(.hidden)
             .background(Theme.background.ignoresSafeArea())
-            .toolbarBackground(Theme.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
     }
 
     /// A white rounded card, like the Freedom app's grouped panels.

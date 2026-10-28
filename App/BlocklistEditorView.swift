@@ -93,8 +93,8 @@ struct BlocklistEditorView: View {
                     Text("Extra categories")
                 }
             }
-            .navigationTitle("Blocklist")
             .focusLockScreen()
+            .navigationTitle("Blocklist")
             .familyActivityPicker(isPresented: $pickerPresented, selection: $selection)
             .alert("Can't remove apps while running", isPresented: $showAppRemovalBlocked) {
                 Button("OK", role: .cancel) { }

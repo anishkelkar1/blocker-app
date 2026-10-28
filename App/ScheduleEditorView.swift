@@ -128,8 +128,8 @@ struct ScheduleEditorView: View {
                 }
 
             }
-            .navigationTitle("Schedule")
             .focusLockScreen()
+            .navigationTitle("Schedule")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

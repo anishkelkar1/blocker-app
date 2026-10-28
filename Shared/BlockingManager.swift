@@ -62,6 +62,7 @@ public final class BlockingManager {
         var categories = Set<ActivityCategoryToken>()
         var webs = Set<WebDomainToken>()
         var domains: [String] = []
+        var adultFilter = false
 
         for idString in ids {
             guard let id = UUID(uuidString: idString),
@@ -72,13 +73,19 @@ public final class BlockingManager {
                 webs.formUnion(selection.webDomainTokens)
             }
             domains.append(contentsOf: blocklist.domains)
-            if blocklist.blockAdult { domains.append(contentsOf: AdultDomains.list) }
+            if blocklist.blockAdult {
+                domains.append(contentsOf: AdultDomains.list)
+                adultFilter = true
+            }
             if blocklist.blockFoodDelivery { domains.append(contentsOf: FoodDeliveryDomains.list) }
         }
 
         store.shield.applications = apps.isEmpty ? nil : apps
         store.shield.applicationCategories = categories.isEmpty ? nil : .specific(categories)
         store.shield.webDomains = webs.isEmpty ? nil : webs
+        // Apple's built-in "limit adult websites" filter — this covers Safari
+        // and every iOS browser at the OS level, far beyond our domain list.
+        store.webContent.blockedByFilter = adultFilter ? .auto([], except: []) : nil
         setAppRemoval(denied: SharedState.denyAppRemoval)
         SharedState.activeDomains = Array(Set(domains))
     }

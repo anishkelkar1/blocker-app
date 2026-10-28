@@ -16,8 +16,13 @@ struct ScheduleEditorView: View {
     private let id: UUID
     private let blocklists = BlocklistStore.all
 
+    /// True when editing a schedule that already exists. Its timings (days,
+    /// times, all-day) are then locked — set once, can't be changed.
+    private let isExisting: Bool
+
     init(schedule: BlockSchedule) {
         id = schedule.id
+        isExisting = ScheduleStore.get(schedule.id) != nil
         _name = State(initialValue: schedule.name)
         _blocklistID = State(initialValue: schedule.blocklistID)
         _weekdays = State(initialValue: schedule.weekdays)
@@ -31,6 +36,14 @@ struct ScheduleEditorView: View {
         NavigationStack {
             Form {
                 Section("Name") { TextField("Schedule name", text: $name) }
+
+                if isExisting {
+                    Section {
+                        Label("Timings are locked once a schedule is created. Delete it and make a new one to change the days or times.",
+                              systemImage: "lock.fill")
+                            .font(.footnote).foregroundStyle(.orange)
+                    }
+                }
 
                 Section("Blocklist") {
                     Picker("Run", selection: $blocklistID) {
@@ -55,17 +68,21 @@ struct ScheduleEditorView: View {
                             .buttonStyle(.plain)
                         }
                     }
+                    .disabled(isExisting)
                 }
 
                 Section("Time") {
                     Toggle("All day (24 hours)", isOn: $allDay)
+                        .disabled(isExisting)
                     if allDay {
                         Label("Blocks all day on each selected day. Pick every day for a permanent block.",
                               systemImage: "clock.badge.checkmark")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
                         DatePicker("Start", selection: $start, displayedComponents: .hourAndMinute)
+                            .disabled(isExisting)
                         DatePicker("End", selection: $end, displayedComponents: .hourAndMinute)
+                            .disabled(isExisting)
                         if startEqualsEnd {
                             Label("Start and end can't be the same.",
                                   systemImage: "exclamationmark.triangle")

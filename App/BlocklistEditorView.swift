@@ -14,9 +14,15 @@ struct BlocklistEditorView: View {
     @State private var pickerPresented = false
 
     private let id: UUID
+    private let originalBlockAdult: Bool
+
+    /// True while this blocklist is currently being enforced (manually or by a
+    /// schedule). While active, edits may only ADD blocks, never remove them.
+    private var isActive: Bool { SharedState.activeIDs.contains(id.uuidString) }
 
     init(blocklist: Blocklist) {
         id = blocklist.id
+        originalBlockAdult = blocklist.blockAdult
         _name = State(initialValue: blocklist.name)
         _domains = State(initialValue: blocklist.domains)
         _blockAdult = State(initialValue: blocklist.blockAdult)
@@ -31,15 +37,30 @@ struct BlocklistEditorView: View {
                     TextField("Blocklist name", text: $name)
                 }
 
-                Section("Apps & categories") {
+                if isActive {
+                    Section {
+                        Label("Running — you can add blocks, but can't remove ones already active.",
+                              systemImage: "lock.fill")
+                            .font(.footnote).foregroundStyle(.orange)
+                    }
+                }
+
+                Section {
                     Button {
                         pickerPresented = true
                     } label: {
                         Label("Choose apps & categories", systemImage: "square.grid.2x2")
                     }
+                    .disabled(isActive)
                     LabeledContent("Apps", value: "\(selection.applicationTokens.count)")
                     LabeledContent("Categories", value: "\(selection.categoryTokens.count)")
                     LabeledContent("Safari sites", value: "\(selection.webDomainTokens.count)")
+                } header: {
+                    Text("Apps & categories")
+                } footer: {
+                    if isActive {
+                        Text("Apps are locked while this blocklist is running. Stop it to change them.")
+                    }
                 }
 
                 Section {
@@ -52,7 +73,7 @@ struct BlocklistEditorView: View {
                             .disabled(newDomain.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                     ForEach(domains, id: \.self) { Text($0) }
-                        .onDelete { domains.remove(atOffsets: $0) }
+                        .onDelete(perform: isActive ? nil : removeDomains)
                 } header: {
                     Text("Website rules (all browsers)")
                 } footer: {
@@ -61,6 +82,7 @@ struct BlocklistEditorView: View {
 
                 Section {
                     Toggle("Block adult sites", isOn: $blockAdult)
+                        .disabled(isActive && originalBlockAdult)
                 } footer: {
                     Text("Also blocks a built-in list of popular adult sites via the website filter. Not exhaustive — add specific sites above too. A browser with its own encrypted DNS (e.g. Firefox) needs the app itself blocked.")
                 }
@@ -85,11 +107,35 @@ struct BlocklistEditorView: View {
         newDomain = ""
     }
 
+    private func removeDomains(at offsets: IndexSet) {
+        domains.remove(atOffsets: offsets)
+    }
+
     private func save() {
+        var finalDomains = domains
+        var finalAdult = blockAdult
+        var finalSelectionData = BlockingManager.shared.encodeSelection(selection)
+
+        // Ratchet: while this blocklist is running, edits may only ADD blocks.
+        // Union domains with what's stored so removals are ignored, keep adult
+        // on if it was on, and keep the enforced app selection unchanged (the
+        // picker is locked while active, since Screen Time selections can't be
+        // safely merged).
+        if isActive, let current = BlocklistStore.get(id) {
+            finalDomains = Array(Set(current.domains).union(finalDomains))
+            finalAdult = current.blockAdult || finalAdult
+            finalSelectionData = current.selectionData
+        }
+
         let list = Blocklist(id: id, name: name,
-                             selectionData: BlockingManager.shared.encodeSelection(selection),
-                             domains: domains, blockAdult: blockAdult)
+                             selectionData: finalSelectionData,
+                             domains: finalDomains, blockAdult: finalAdult)
         BlocklistStore.upsert(list)
+
+        // Live apply: if this blocklist is currently enforced, re-run the
+        // shields and domain set so the additions take effect immediately.
+        if isActive { BlockingManager.shared.recompute() }
+
         dismiss()
     }
 }

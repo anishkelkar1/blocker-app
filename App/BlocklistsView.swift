@@ -41,13 +41,21 @@ struct BlocklistsView: View {
     }
 
     private func summary(_ list: Blocklist) -> String {
-        "\(list.domains.count) site rule(s)"
+        var parts = ["\(list.domains.count) site rule(s)"]
+        if list.blockAdult { parts.append("adult") }
+        if SharedState.activeIDs.contains(list.id.uuidString) { parts.append("running") }
+        return parts.joined(separator: " · ")
     }
 
     private func reload() { blocklists = BlocklistStore.all }
 
+    /// Won't delete a blocklist that's currently running — that would remove
+    /// blocks already in force. Stop it first.
     private func delete(at offsets: IndexSet) {
-        for i in offsets { BlocklistStore.remove(blocklists[i].id) }
+        let active = Set(SharedState.activeIDs)
+        for i in offsets where !active.contains(blocklists[i].id.uuidString) {
+            BlocklistStore.remove(blocklists[i].id)
+        }
         reload()
     }
 }

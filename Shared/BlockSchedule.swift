@@ -13,7 +13,6 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
     var startMinute: Int
     var endHour: Int
     var endMinute: Int
-    var enabled: Bool
     /// When true, the schedule blocks the whole day (00:00–23:59) on each
     /// selected weekday, ignoring the start/end times. Pick every weekday for an
     /// effectively permanent block.
@@ -23,7 +22,7 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
          weekdays: Set<Int> = [2, 3, 4, 5, 6],
          startHour: Int = 9, startMinute: Int = 0,
          endHour: Int = 17, endMinute: Int = 0,
-         enabled: Bool = true, allDay: Bool = false) {
+         allDay: Bool = false) {
         self.id = id
         self.name = name
         self.blocklistID = blocklistID
@@ -32,13 +31,12 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
         self.startMinute = startMinute
         self.endHour = endHour
         self.endMinute = endMinute
-        self.enabled = enabled
         self.allDay = allDay
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, blocklistID, weekdays
-        case startHour, startMinute, endHour, endMinute, enabled, allDay
+        case startHour, startMinute, endHour, endMinute, allDay
     }
 
     /// Custom decoder so schedules saved before `allDay` existed still load
@@ -53,7 +51,6 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
         startMinute = try c.decode(Int.self, forKey: .startMinute)
         endHour = try c.decode(Int.self, forKey: .endHour)
         endMinute = try c.decode(Int.self, forKey: .endMinute)
-        enabled = try c.decode(Bool.self, forKey: .enabled)
         allDay = try c.decodeIfPresent(Bool.self, forKey: .allDay) ?? false
     }
 
@@ -76,7 +73,7 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
     /// True if this (enabled, valid) schedule's window currently covers now — so
     /// its blocklist is being enforced by this schedule right this moment.
     var isActiveNow: Bool {
-        guard enabled, isValid else { return false }
+        guard isValid else { return false }
         let c = Calendar.current.dateComponents([.weekday, .hour, .minute], from: Date())
         guard let wd = c.weekday, let h = c.hour, let m = c.minute else { return false }
         let minutesNow = h * 60 + m

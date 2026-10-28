@@ -10,7 +10,6 @@ struct ScheduleEditorView: View {
     @State private var weekdays: Set<Int>
     @State private var start: Date
     @State private var end: Date
-    @State private var enabled: Bool
     @State private var allDay: Bool
 
     private let id: UUID
@@ -26,7 +25,6 @@ struct ScheduleEditorView: View {
         _name = State(initialValue: schedule.name)
         _blocklistID = State(initialValue: schedule.blocklistID)
         _weekdays = State(initialValue: schedule.weekdays)
-        _enabled = State(initialValue: schedule.enabled)
         _allDay = State(initialValue: schedule.allDay)
         _start = State(initialValue: Self.date(schedule.startHour, schedule.startMinute))
         _end = State(initialValue: Self.date(schedule.endHour, schedule.endMinute))
@@ -95,7 +93,6 @@ struct ScheduleEditorView: View {
                     }
                 }
 
-                Section { Toggle("Enabled", isOn: $enabled) }
             }
             .navigationTitle("Schedule")
             .toolbar {
@@ -124,7 +121,7 @@ struct ScheduleEditorView: View {
                                      weekdays: weekdays,
                                      startHour: s.hour!, startMinute: s.minute!,
                                      endHour: e.hour!, endMinute: e.minute!,
-                                     enabled: enabled, allDay: allDay)
+                                     allDay: allDay)
         ScheduleStore.upsert(schedule)
         dismiss()
     }

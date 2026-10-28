@@ -32,7 +32,7 @@ struct SchedulesView: View {
             .alert("Can't delete this schedule", isPresented: $showDeleteBlocked) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text("Turn the schedule off first (open it and switch Enabled off), then delete it.")
+                Text("This schedule is running right now. You can delete it once its window ends.")
             }
             .onAppear {
                 // Re-read the stores each time the tab appears, so a blocklist
@@ -70,9 +70,7 @@ struct SchedulesView: View {
             HStack {
                 Text(s.name).font(.headline)
                 Spacer()
-                if !s.enabled {
-                    Text("off").font(.caption).foregroundStyle(.secondary)
-                } else if s.isActiveNow {
+                if s.isActiveNow {
                     Text("running").font(.caption).foregroundStyle(.green)
                 }
             }
@@ -92,11 +90,10 @@ struct SchedulesView: View {
         ScheduleManager.shared.refreshAll()
     }
 
-    /// A schedule can only be deleted while it's off. An enabled schedule is a
-    /// standing commitment, so deletion is refused until it's disabled — this
-    /// also covers a schedule that's currently running.
+    /// A schedule can't be deleted while it's running — that would lift a block
+    /// in force. It can be deleted once its window ends.
     private func tryDelete(_ s: BlockSchedule) {
-        guard !s.enabled else { showDeleteBlocked = true; return }
+        guard !s.isActiveNow else { showDeleteBlocked = true; return }
         ScheduleStore.remove(s.id)
         reload()
     }

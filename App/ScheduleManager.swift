@@ -16,7 +16,7 @@ final class ScheduleManager: ObservableObject {
         let existing = center.activities.filter { $0.rawValue.hasPrefix("sch.") }
         if !existing.isEmpty { center.stopMonitoring(existing) }
 
-        for schedule in ScheduleStore.all where schedule.enabled && schedule.isValid {
+        for schedule in ScheduleStore.all where schedule.isValid {
             for weekday in schedule.weekdays {
                 if schedule.allDay {
                     register("sch.\(schedule.id.uuidString).\(weekday)",

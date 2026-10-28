@@ -30,6 +30,7 @@ struct BlocklistsView: View {
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
+                        .tint(.red)
                     }
                 }
 

@@ -6,6 +6,7 @@ struct SchedulesView: View {
     @State private var schedules: [BlockSchedule] = ScheduleStore.all
     @State private var blocklists: [Blocklist] = BlocklistStore.all
     @State private var editing: BlockSchedule?
+    @State private var showDeleteBlocked = false
 
     var body: some View {
         NavigationStack {
@@ -13,8 +14,14 @@ struct SchedulesView: View {
                 ForEach(schedules) { schedule in
                     Button { editing = schedule } label: { row(schedule) }
                         .tint(.primary)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                tryDelete(schedule)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                 }
-                .onDelete(perform: delete)
 
                 if schedules.isEmpty {
                     Text("No schedules yet. Tap + to add one.")
@@ -22,6 +29,11 @@ struct SchedulesView: View {
                 }
             }
             .navigationTitle("Schedules")
+            .alert("Can't delete this schedule", isPresented: $showDeleteBlocked) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Turn the schedule off first (open it and switch Enabled off), then delete it.")
+            }
             .onAppear {
                 // Re-read the stores each time the tab appears, so a blocklist
                 // created on another tab is picked up (SwiftUI won't re-run body
@@ -80,12 +92,12 @@ struct SchedulesView: View {
         ScheduleManager.shared.refreshAll()
     }
 
-    /// Won't delete a schedule that's currently running — that would lift a
-    /// block already in force. It can be deleted once its window ends.
-    private func delete(at offsets: IndexSet) {
-        for i in offsets where !schedules[i].isActiveNow {
-            ScheduleStore.remove(schedules[i].id)
-        }
+    /// A schedule can only be deleted while it's off. An enabled schedule is a
+    /// standing commitment, so deletion is refused until it's disabled — this
+    /// also covers a schedule that's currently running.
+    private func tryDelete(_ s: BlockSchedule) {
+        guard !s.enabled else { showDeleteBlocked = true; return }
+        ScheduleStore.remove(s.id)
         reload()
     }
 }

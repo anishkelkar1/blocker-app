@@ -27,6 +27,7 @@ struct BlocklistsView: View {
                 }
             }
             .navigationTitle("Blocklists")
+            .focusLockScreen()
             .onAppear {
                 // Clear any stale scheduled-active state so the "running" badge
                 // reflects only schedules actually in their window right now.

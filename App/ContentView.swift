@@ -5,6 +5,12 @@ struct ContentView: View {
     @EnvironmentObject var auth: AuthorizationManager
     @EnvironmentObject var controller: BlockController
 
+    init() {
+        #if canImport(UIKit)
+        Theme.configureBars()
+        #endif
+    }
+
     var body: some View {
         TabView {
             HomeView()
@@ -19,6 +25,9 @@ struct ContentView: View {
             StrictModeView()
                 .tabItem { Label("Strict", systemImage: "exclamationmark.lock") }
         }
+        .tint(Theme.navy)
+        .roundedFont()
+        .preferredColorScheme(.light)
     }
 }
 
@@ -32,19 +41,20 @@ struct AuthBanner: View {
             case .approved:
                 EmptyView()
             default:
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     Label("Screen Time access needed", systemImage: "exclamationmark.triangle.fill")
                         .font(.headline)
-                    Text("Blocking does nothing until you grant Screen Time access. This requires a real device and a build signed with the Family Controls entitlement.")
+                        .foregroundStyle(Theme.navyDeep)
+                    Text("Blocking does nothing until you grant Screen Time access. This needs a real device and a build signed with the Family Controls entitlement.")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.silver)
                     Button("Grant access") {
                         Task { await auth.requestAuthorization() }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(FilledPill())
+                    .padding(.top, 2)
                 }
-                .padding()
-                .background(.yellow.opacity(0.15), in: RoundedRectangle(cornerRadius: 12))
+                .card()
             }
         }
     }

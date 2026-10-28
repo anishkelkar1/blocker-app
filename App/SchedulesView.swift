@@ -29,6 +29,7 @@ struct SchedulesView: View {
                 }
             }
             .navigationTitle("Schedules")
+            .focusLockScreen()
             .alert("Can't delete this schedule", isPresented: $showDeleteBlocked) {
                 Button("OK", role: .cancel) { }
             } message: {

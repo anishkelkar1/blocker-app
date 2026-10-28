@@ -6,9 +6,11 @@ import Foundation
 /// website *and* its app — the apps hit the same domains (api., cdn., etc.), so
 /// DNS-blocking the apex breaks the app's backend, not just the website.
 ///
-/// Note on Uber Eats: its app runs on Uber's shared backend (uber.com), so
-/// `uber.com` is included to actually block the app — which also blocks Uber
-/// rides. Remove it if you need rides while blocking food delivery.
+/// Note on Uber Eats: its app runs on Uber's shared backend (uber.com), which
+/// is deliberately NOT blocked here (that would also block Uber rides). So
+/// ubereats.com blocks the website, but the Uber Eats app itself may still
+/// work — add the app in the blocklist's Apps & categories picker to hard-block
+/// it.
 ///
 /// Curated, not exhaustive. Like all DNS filtering, a service using its own
 /// encrypted DNS can bypass it; for a hard block, also add the app in the
@@ -18,7 +20,6 @@ enum FoodDeliveryDomains {
         // Restaurant delivery
         "doordash.com",
         "ubereats.com",
-        "uber.com",            // Uber Eats app backend (also Uber rides)
         "grubhub.com",
         "seamless.com",
         "postmates.com",

@@ -16,7 +16,9 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         guard activity != BlockingManager.manualActivity else { return }
         guard let scheduleID = Self.scheduleID(from: activity),
               let schedule = ScheduleStore.get(scheduleID) else { return }
-        BlockingManager.shared.addScheduled(schedule.blocklistID)
+        for blocklistID in schedule.blocklistIDs {
+            BlockingManager.shared.addScheduled(blocklistID)
+        }
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
@@ -28,7 +30,9 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
         guard let scheduleID = Self.scheduleID(from: activity),
               let schedule = ScheduleStore.get(scheduleID) else { return }
-        BlockingManager.shared.removeScheduled(schedule.blocklistID)
+        for blocklistID in schedule.blocklistIDs {
+            BlockingManager.shared.removeScheduled(blocklistID)
+        }
     }
 
     /// Extract the schedule UUID from `sch.<uuid>.<weekday>[.b]`.

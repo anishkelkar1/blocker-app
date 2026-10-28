@@ -74,14 +74,19 @@ struct SchedulesView: View {
                     Text("running").font(.caption).foregroundStyle(.green)
                 }
             }
-            Text("\(BlocklistStore.get(s.blocklistID)?.name ?? "—") · \(s.weekdaysText) · \(s.windowText)")
+            Text("\(blocklistNames(s)) · \(s.weekdaysText) · \(s.windowText)")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
 
+    private func blocklistNames(_ s: BlockSchedule) -> String {
+        let names = s.blocklistIDs.compactMap { BlocklistStore.get($0)?.name }
+        return names.isEmpty ? "—" : names.joined(separator: ", ")
+    }
+
     private func addNew() {
         guard let first = blocklists.first else { return }
-        editing = BlockSchedule(name: "New schedule", blocklistID: first.id)
+        editing = BlockSchedule(name: "New schedule", blocklistIDs: [first.id])
     }
 
     private func reload() {

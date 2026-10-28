@@ -6,7 +6,9 @@ import Foundation
 struct BlockSchedule: Identifiable, Codable, Equatable {
     var id: UUID
     var name: String
-    var blocklistID: UUID
+    /// Blocklists this schedule runs. Several can run together; while the
+    /// schedule is active you can add more but not remove ones already running.
+    var blocklistIDs: [UUID]
     /// Calendar weekdays: 1 = Sunday ... 7 = Saturday.
     var weekdays: Set<Int>
     var startHour: Int
@@ -18,14 +20,14 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
     /// effectively permanent block.
     var allDay: Bool
 
-    init(id: UUID = UUID(), name: String, blocklistID: UUID,
+    init(id: UUID = UUID(), name: String, blocklistIDs: [UUID],
          weekdays: Set<Int> = [2, 3, 4, 5, 6],
          startHour: Int = 9, startMinute: Int = 0,
          endHour: Int = 17, endMinute: Int = 0,
          allDay: Bool = false) {
         self.id = id
         self.name = name
-        self.blocklistID = blocklistID
+        self.blocklistIDs = blocklistIDs
         self.weekdays = weekdays
         self.startHour = startHour
         self.startMinute = startMinute
@@ -35,9 +37,12 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, blocklistID, weekdays
+        case id, name, blocklistIDs, weekdays
         case startHour, startMinute, endHour, endMinute, allDay
     }
+
+    /// Old schedules stored a single `blocklistID`; decode it as a fallback.
+    private enum LegacyKeys: String, CodingKey { case blocklistID }
 
     /// Custom decoder so schedules saved before `allDay` existed still load
     /// (the key defaults to false when missing). Encoding stays synthesized.
@@ -45,13 +50,20 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         name = try c.decode(String.self, forKey: .name)
-        blocklistID = try c.decode(UUID.self, forKey: .blocklistID)
         weekdays = try c.decode(Set<Int>.self, forKey: .weekdays)
         startHour = try c.decode(Int.self, forKey: .startHour)
         startMinute = try c.decode(Int.self, forKey: .startMinute)
         endHour = try c.decode(Int.self, forKey: .endHour)
         endMinute = try c.decode(Int.self, forKey: .endMinute)
         allDay = try c.decodeIfPresent(Bool.self, forKey: .allDay) ?? false
+        if let ids = try c.decodeIfPresent([UUID].self, forKey: .blocklistIDs) {
+            blocklistIDs = ids
+        } else if let single = try? decoder.container(keyedBy: LegacyKeys.self)
+            .decode(UUID.self, forKey: .blocklistID) {
+            blocklistIDs = [single]   // migrate the old single-blocklist field
+        } else {
+            blocklistIDs = []
+        }
     }
 
     var startText: String { String(format: "%02d:%02d", startHour, startMinute) }

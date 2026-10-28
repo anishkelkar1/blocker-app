@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// Create or edit one recurring schedule: which blocklist, which weekdays, and
+/// Create or edit one recurring schedule: which blocklists, which weekdays, and
 /// the daily start/end time.
 struct ScheduleEditorView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var name: String
-    @State private var blocklistID: UUID
+    @State private var blocklistIDs: Set<UUID>
     @State private var weekdays: Set<Int>
     @State private var start: Date
     @State private var end: Date
@@ -14,16 +14,23 @@ struct ScheduleEditorView: View {
 
     private let id: UUID
     private let blocklists = BlocklistStore.all
+    /// Blocklists the schedule already had — while it's running these can't be
+    /// removed, only added to.
+    private let originalIDs: Set<UUID>
 
     /// True when editing a schedule that already exists. Its timings (days,
     /// times, all-day) are then locked — set once, can't be changed.
     private let isExisting: Bool
 
+    /// True while the schedule's window currently covers now.
+    private var isRunning: Bool { ScheduleStore.get(id)?.isActiveNow ?? false }
+
     init(schedule: BlockSchedule) {
         id = schedule.id
         isExisting = ScheduleStore.get(schedule.id) != nil
+        originalIDs = Set(schedule.blocklistIDs)
         _name = State(initialValue: schedule.name)
-        _blocklistID = State(initialValue: schedule.blocklistID)
+        _blocklistIDs = State(initialValue: Set(schedule.blocklistIDs))
         _weekdays = State(initialValue: schedule.weekdays)
         _allDay = State(initialValue: schedule.allDay)
         _start = State(initialValue: Self.date(schedule.startHour, schedule.startMinute))
@@ -43,9 +50,36 @@ struct ScheduleEditorView: View {
                     }
                 }
 
-                Section("Blocklist") {
-                    Picker("Run", selection: $blocklistID) {
-                        ForEach(blocklists) { Text($0.name).tag($0.id) }
+                Section {
+                    ForEach(blocklists) { list in
+                        let on = blocklistIDs.contains(list.id)
+                        let locked = isRunning && originalIDs.contains(list.id)
+                        Button {
+                            if on {
+                                if locked { return }   // ratchet: can't remove while running
+                                blocklistIDs.remove(list.id)
+                            } else {
+                                blocklistIDs.insert(list.id)
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(on ? Color.accentColor : .secondary)
+                                Text(list.name)
+                                Spacer()
+                                if locked {
+                                    Image(systemName: "lock.fill")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .tint(.primary)
+                    }
+                } header: {
+                    Text("Blocklists")
+                } footer: {
+                    if isRunning {
+                        Text("This schedule is running. You can add blocklists but can't remove ones already active.")
                     }
                 }
 
@@ -112,17 +146,27 @@ struct ScheduleEditorView: View {
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && !weekdays.isEmpty
-            && (allDay || !startEqualsEnd)
+            && !blocklistIDs.isEmpty && (allDay || !startEqualsEnd)
     }
 
     private func save() {
         let s = comps(start), e = comps(end)
-        let schedule = BlockSchedule(id: id, name: name, blocklistID: blocklistID,
+        // Ratchet: while running, never drop a blocklist already in force.
+        var finalIDs = blocklistIDs
+        if isRunning { finalIDs.formUnion(originalIDs) }
+
+        let schedule = BlockSchedule(id: id, name: name, blocklistIDs: Array(finalIDs),
                                      weekdays: weekdays,
                                      startHour: s.hour!, startMinute: s.minute!,
                                      endHour: e.hour!, endMinute: e.minute!,
                                      allDay: allDay)
         ScheduleStore.upsert(schedule)
+
+        // If the schedule is running now, enforce any newly added blocklists
+        // immediately — the monitor only fires at the window edges.
+        if isRunning {
+            for bid in finalIDs { BlockingManager.shared.addScheduled(bid) }
+        }
         dismiss()
     }
 

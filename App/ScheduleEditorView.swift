@@ -125,6 +125,12 @@ struct ScheduleEditorView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
+
+                    if allDay || !startEqualsEnd {
+                        Text("Schedule runs \(durationText)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.navy)
+                    }
                 }
 
             }
@@ -144,6 +150,23 @@ struct ScheduleEditorView: View {
     }
     private var startEqualsEnd: Bool { minutes(start) == minutes(end) }
     private var crossesMidnight: Bool { minutes(end) <= minutes(start) }
+
+    /// How long one run of the schedule lasts, in minutes. All-day is 24 hours;
+    /// an overnight window wraps past midnight into the next day.
+    private var runMinutes: Int {
+        if allDay { return 24 * 60 }
+        let diff = minutes(end) - minutes(start)
+        return diff > 0 ? diff : diff + 24 * 60
+    }
+
+    /// The run length as words, e.g. "1 hour", "1 hour 30 minutes", "45 minutes".
+    private var durationText: String {
+        let hours = runMinutes / 60, mins = runMinutes % 60
+        var parts: [String] = []
+        if hours > 0 { parts.append("\(hours) hour\(hours == 1 ? "" : "s")") }
+        if mins > 0 { parts.append("\(mins) minute\(mins == 1 ? "" : "s")") }
+        return parts.isEmpty ? "0 minutes" : parts.joined(separator: " ")
+    }
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && !weekdays.isEmpty

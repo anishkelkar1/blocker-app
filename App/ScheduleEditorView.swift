@@ -11,6 +11,7 @@ struct ScheduleEditorView: View {
     @State private var start: Date
     @State private var end: Date
     @State private var enabled: Bool
+    @State private var allDay: Bool
 
     private let id: UUID
     private let blocklists = BlocklistStore.all
@@ -21,6 +22,7 @@ struct ScheduleEditorView: View {
         _blocklistID = State(initialValue: schedule.blocklistID)
         _weekdays = State(initialValue: schedule.weekdays)
         _enabled = State(initialValue: schedule.enabled)
+        _allDay = State(initialValue: schedule.allDay)
         _start = State(initialValue: Self.date(schedule.startHour, schedule.startMinute))
         _end = State(initialValue: Self.date(schedule.endHour, schedule.endMinute))
     }
@@ -56,16 +58,23 @@ struct ScheduleEditorView: View {
                 }
 
                 Section("Time") {
-                    DatePicker("Start", selection: $start, displayedComponents: .hourAndMinute)
-                    DatePicker("End", selection: $end, displayedComponents: .hourAndMinute)
-                    if startEqualsEnd {
-                        Label("Start and end can't be the same.",
-                              systemImage: "exclamationmark.triangle")
-                            .font(.caption).foregroundStyle(.orange)
-                    } else if crossesMidnight {
-                        Label("Overnight — runs past midnight into the next day.",
-                              systemImage: "moon.stars")
+                    Toggle("All day (24 hours)", isOn: $allDay)
+                    if allDay {
+                        Label("Blocks all day on each selected day. Pick every day for a permanent block.",
+                              systemImage: "clock.badge.checkmark")
                             .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        DatePicker("Start", selection: $start, displayedComponents: .hourAndMinute)
+                        DatePicker("End", selection: $end, displayedComponents: .hourAndMinute)
+                        if startEqualsEnd {
+                            Label("Start and end can't be the same.",
+                                  systemImage: "exclamationmark.triangle")
+                                .font(.caption).foregroundStyle(.orange)
+                        } else if crossesMidnight {
+                            Label("Overnight — runs past midnight into the next day.",
+                                  systemImage: "moon.stars")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                 }
 
@@ -88,7 +97,8 @@ struct ScheduleEditorView: View {
     private var crossesMidnight: Bool { minutes(end) <= minutes(start) }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && !weekdays.isEmpty && !startEqualsEnd
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && !weekdays.isEmpty
+            && (allDay || !startEqualsEnd)
     }
 
     private func save() {
@@ -97,7 +107,7 @@ struct ScheduleEditorView: View {
                                      weekdays: weekdays,
                                      startHour: s.hour!, startMinute: s.minute!,
                                      endHour: e.hour!, endMinute: e.minute!,
-                                     enabled: enabled)
+                                     enabled: enabled, allDay: allDay)
         ScheduleStore.upsert(schedule)
         dismiss()
     }

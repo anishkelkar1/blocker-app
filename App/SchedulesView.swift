@@ -4,6 +4,7 @@ import SwiftUI
 /// delete them. Any change re-registers DeviceActivity monitoring.
 struct SchedulesView: View {
     @State private var schedules: [BlockSchedule] = ScheduleStore.all
+    @State private var blocklists: [Blocklist] = BlocklistStore.all
     @State private var editing: BlockSchedule?
 
     var body: some View {
@@ -21,17 +22,24 @@ struct SchedulesView: View {
                 }
             }
             .navigationTitle("Schedules")
+            .onAppear {
+                // Re-read the stores each time the tab appears, so a blocklist
+                // created on another tab is picked up (SwiftUI won't re-run body
+                // on its own here — the stores aren't observed objects).
+                schedules = ScheduleStore.all
+                blocklists = BlocklistStore.all
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { addNew() } label: { Image(systemName: "plus") }
-                        .disabled(BlocklistStore.all.isEmpty)
+                        .disabled(blocklists.isEmpty)
                 }
             }
             .sheet(item: $editing, onDismiss: reload) { schedule in
                 ScheduleEditorView(schedule: schedule)
             }
             .overlay {
-                if BlocklistStore.all.isEmpty {
+                if blocklists.isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "list.bullet")
                             .font(.largeTitle).foregroundStyle(.secondary)
@@ -52,18 +60,19 @@ struct SchedulesView: View {
                 Spacer()
                 if !s.enabled { Text("off").font(.caption).foregroundStyle(.secondary) }
             }
-            Text("\(BlocklistStore.get(s.blocklistID)?.name ?? "—") · \(s.weekdaysText) · \(s.startText)–\(s.endText)")
+            Text("\(BlocklistStore.get(s.blocklistID)?.name ?? "—") · \(s.weekdaysText) · \(s.windowText)")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
 
     private func addNew() {
-        guard let first = BlocklistStore.all.first else { return }
+        guard let first = blocklists.first else { return }
         editing = BlockSchedule(name: "New schedule", blocklistID: first.id)
     }
 
     private func reload() {
         schedules = ScheduleStore.all
+        blocklists = BlocklistStore.all
         ScheduleManager.shared.refreshAll()
     }
 

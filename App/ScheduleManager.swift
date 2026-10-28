@@ -4,7 +4,8 @@ import DeviceActivity
 /// Registers DeviceActivity monitoring for every enabled schedule. A same-day
 /// window becomes one activity per weekday (`sch.<id>.<weekday>`); an overnight
 /// window is split across midnight into an `.a` segment (start→23:59 on the
-/// weekday) and a `.b` segment (00:00→end on the next weekday). The block lifts
+/// weekday) and a `.b` segment (00:00→end on the next weekday). An all-day
+/// schedule uses one full-day window (00:00→23:59) per weekday. The block lifts
 /// for under a minute at the midnight boundary — acceptable for a focus app.
 @MainActor
 final class ScheduleManager: ObservableObject {
@@ -17,7 +18,11 @@ final class ScheduleManager: ObservableObject {
 
         for schedule in ScheduleStore.all where schedule.enabled && schedule.isValid {
             for weekday in schedule.weekdays {
-                if schedule.crossesMidnight {
+                if schedule.allDay {
+                    register("sch.\(schedule.id.uuidString).\(weekday)",
+                             startHour: 0, startMinute: 0,
+                             endHour: 23, endMinute: 59, weekday: weekday)
+                } else if schedule.crossesMidnight {
                     register("sch.\(schedule.id.uuidString).\(weekday).a",
                              startHour: schedule.startHour, startMinute: schedule.startMinute,
                              endHour: 23, endMinute: 59, weekday: weekday)

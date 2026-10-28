@@ -14,12 +14,16 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
     var endHour: Int
     var endMinute: Int
     var enabled: Bool
+    /// When true, the schedule blocks the whole day (00:00–23:59) on each
+    /// selected weekday, ignoring the start/end times. Pick every weekday for an
+    /// effectively permanent block.
+    var allDay: Bool
 
     init(id: UUID = UUID(), name: String, blocklistID: UUID,
          weekdays: Set<Int> = [2, 3, 4, 5, 6],
          startHour: Int = 9, startMinute: Int = 0,
          endHour: Int = 17, endMinute: Int = 0,
-         enabled: Bool = true) {
+         enabled: Bool = true, allDay: Bool = false) {
         self.id = id
         self.name = name
         self.blocklistID = blocklistID
@@ -29,10 +33,35 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
         self.endHour = endHour
         self.endMinute = endMinute
         self.enabled = enabled
+        self.allDay = allDay
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, blocklistID, weekdays
+        case startHour, startMinute, endHour, endMinute, enabled, allDay
+    }
+
+    /// Custom decoder so schedules saved before `allDay` existed still load
+    /// (the key defaults to false when missing). Encoding stays synthesized.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        blocklistID = try c.decode(UUID.self, forKey: .blocklistID)
+        weekdays = try c.decode(Set<Int>.self, forKey: .weekdays)
+        startHour = try c.decode(Int.self, forKey: .startHour)
+        startMinute = try c.decode(Int.self, forKey: .startMinute)
+        endHour = try c.decode(Int.self, forKey: .endHour)
+        endMinute = try c.decode(Int.self, forKey: .endMinute)
+        enabled = try c.decode(Bool.self, forKey: .enabled)
+        allDay = try c.decodeIfPresent(Bool.self, forKey: .allDay) ?? false
     }
 
     var startText: String { String(format: "%02d:%02d", startHour, startMinute) }
     var endText: String { String(format: "%02d:%02d", endHour, endMinute) }
+
+    /// Human-readable block window for lists: the time range, or "All day".
+    var windowText: String { allDay ? "All day" : "\(startText)–\(endText)" }
 
     var startMinutes: Int { startHour * 60 + startMinute }
     var endMinutes: Int { endHour * 60 + endMinute }
@@ -40,8 +69,9 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
     /// End is earlier than or equal to start, so the window runs past midnight.
     var crossesMidnight: Bool { endMinutes <= startMinutes }
 
-    /// The only invalid case is a zero-length window.
-    var isValid: Bool { startMinutes != endMinutes }
+    /// All-day schedules are always valid; otherwise the only invalid case is a
+    /// zero-length window.
+    var isValid: Bool { allDay || startMinutes != endMinutes }
 
     static let weekdaySymbols = ["", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 

@@ -43,6 +43,7 @@ struct BlocklistsView: View {
     private func summary(_ list: Blocklist) -> String {
         var parts = ["\(list.domains.count) site rule(s)"]
         if list.blockAdult { parts.append("adult") }
+        if list.blockFoodDelivery { parts.append("food delivery") }
         if SharedState.activeIDs.contains(list.id.uuidString) { parts.append("running") }
         return parts.joined(separator: " · ")
     }

@@ -73,6 +73,7 @@ public final class BlockingManager {
             }
             domains.append(contentsOf: blocklist.domains)
             if blocklist.blockAdult { domains.append(contentsOf: AdultDomains.list) }
+            if blocklist.blockFoodDelivery { domains.append(contentsOf: FoodDeliveryDomains.list) }
         }
 
         store.shield.applications = apps.isEmpty ? nil : apps

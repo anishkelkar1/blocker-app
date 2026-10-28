@@ -10,11 +10,13 @@ struct BlocklistEditorView: View {
     @State private var selection: FamilyActivitySelection
     @State private var domains: [String]
     @State private var blockAdult: Bool
+    @State private var blockFoodDelivery: Bool
     @State private var newDomain = ""
     @State private var pickerPresented = false
 
     private let id: UUID
     private let originalBlockAdult: Bool
+    private let originalBlockFoodDelivery: Bool
 
     /// True while this blocklist is currently being enforced (manually or by a
     /// schedule). While active, edits may only ADD blocks, never remove them.
@@ -23,9 +25,11 @@ struct BlocklistEditorView: View {
     init(blocklist: Blocklist) {
         id = blocklist.id
         originalBlockAdult = blocklist.blockAdult
+        originalBlockFoodDelivery = blocklist.blockFoodDelivery
         _name = State(initialValue: blocklist.name)
         _domains = State(initialValue: blocklist.domains)
         _blockAdult = State(initialValue: blocklist.blockAdult)
+        _blockFoodDelivery = State(initialValue: blocklist.blockFoodDelivery)
         _selection = State(initialValue:
             BlockingManager.shared.decodeSelection(blocklist.selectionData) ?? FamilyActivitySelection())
     }
@@ -83,8 +87,10 @@ struct BlocklistEditorView: View {
                 Section {
                     Toggle("Block adult sites", isOn: $blockAdult)
                         .disabled(isActive && originalBlockAdult)
-                } footer: {
-                    Text("Also blocks a built-in list of popular adult sites via the website filter. Not exhaustive — add specific sites above too. A browser with its own encrypted DNS (e.g. Firefox) needs the app itself blocked.")
+                    Toggle("Block food delivery", isOn: $blockFoodDelivery)
+                        .disabled(isActive && originalBlockFoodDelivery)
+                } header: {
+                    Text("Extra categories")
                 }
             }
             .navigationTitle("Blocklist")
@@ -114,22 +120,25 @@ struct BlocklistEditorView: View {
     private func save() {
         var finalDomains = domains
         var finalAdult = blockAdult
+        var finalFood = blockFoodDelivery
         var finalSelectionData = BlockingManager.shared.encodeSelection(selection)
 
         // Ratchet: while this blocklist is running, edits may only ADD blocks.
-        // Union domains with what's stored so removals are ignored, keep adult
-        // on if it was on, and keep the enforced app selection unchanged (the
-        // picker is locked while active, since Screen Time selections can't be
-        // safely merged).
+        // Union domains with what's stored so removals are ignored, keep the
+        // category toggles on if they were on, and keep the enforced app
+        // selection unchanged (the picker is locked while active, since Screen
+        // Time selections can't be safely merged).
         if isActive, let current = BlocklistStore.get(id) {
             finalDomains = Array(Set(current.domains).union(finalDomains))
             finalAdult = current.blockAdult || finalAdult
+            finalFood = current.blockFoodDelivery || finalFood
             finalSelectionData = current.selectionData
         }
 
         let list = Blocklist(id: id, name: name,
                              selectionData: finalSelectionData,
-                             domains: finalDomains, blockAdult: finalAdult)
+                             domains: finalDomains, blockAdult: finalAdult,
+                             blockFoodDelivery: finalFood)
         BlocklistStore.upsert(list)
 
         // Live apply: if this blocklist is currently enforced, re-run the

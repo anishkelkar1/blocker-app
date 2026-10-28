@@ -12,18 +12,23 @@ struct Blocklist: Identifiable, Codable, Equatable {
     /// When true, also block a built-in list of popular adult sites
     /// (`AdultDomains.list`) through the website filter.
     var blockAdult: Bool
+    /// When true, also block a built-in list of popular food-delivery apps and
+    /// sites (`FoodDeliveryDomains.list`) through the website filter.
+    var blockFoodDelivery: Bool
 
     init(id: UUID = UUID(), name: String, selectionData: Data? = nil,
-         domains: [String] = [], blockAdult: Bool = false) {
+         domains: [String] = [], blockAdult: Bool = false,
+         blockFoodDelivery: Bool = false) {
         self.id = id
         self.name = name
         self.selectionData = selectionData
         self.domains = domains
         self.blockAdult = blockAdult
+        self.blockFoodDelivery = blockFoodDelivery
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, selectionData, domains, blockAdult
+        case id, name, selectionData, domains, blockAdult, blockFoodDelivery
     }
 
     /// Custom decoder so blocklists saved before `blockAdult` existed still load
@@ -35,6 +40,7 @@ struct Blocklist: Identifiable, Codable, Equatable {
         selectionData = try c.decodeIfPresent(Data.self, forKey: .selectionData)
         domains = try c.decode([String].self, forKey: .domains)
         blockAdult = try c.decodeIfPresent(Bool.self, forKey: .blockAdult) ?? false
+        blockFoodDelivery = try c.decodeIfPresent(Bool.self, forKey: .blockFoodDelivery) ?? false
     }
 }
 

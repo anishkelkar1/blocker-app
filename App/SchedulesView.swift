@@ -58,7 +58,11 @@ struct SchedulesView: View {
             HStack {
                 Text(s.name).font(.headline)
                 Spacer()
-                if !s.enabled { Text("off").font(.caption).foregroundStyle(.secondary) }
+                if !s.enabled {
+                    Text("off").font(.caption).foregroundStyle(.secondary)
+                } else if s.isActiveNow {
+                    Text("running").font(.caption).foregroundStyle(.green)
+                }
             }
             Text("\(BlocklistStore.get(s.blocklistID)?.name ?? "—") · \(s.weekdaysText) · \(s.windowText)")
                 .font(.caption).foregroundStyle(.secondary)
@@ -76,8 +80,12 @@ struct SchedulesView: View {
         ScheduleManager.shared.refreshAll()
     }
 
+    /// Won't delete a schedule that's currently running — that would lift a
+    /// block already in force. It can be deleted once its window ends.
     private func delete(at offsets: IndexSet) {
-        for i in offsets { ScheduleStore.remove(schedules[i].id) }
+        for i in offsets where !schedules[i].isActiveNow {
+            ScheduleStore.remove(schedules[i].id)
+        }
         reload()
     }
 }

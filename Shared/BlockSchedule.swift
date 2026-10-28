@@ -73,10 +73,28 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
     /// zero-length window.
     var isValid: Bool { allDay || startMinutes != endMinutes }
 
+    /// True if this (enabled, valid) schedule's window currently covers now — so
+    /// its blocklist is being enforced by this schedule right this moment.
+    var isActiveNow: Bool {
+        guard enabled, isValid else { return false }
+        let c = Calendar.current.dateComponents([.weekday, .hour, .minute], from: Date())
+        guard let wd = c.weekday, let h = c.hour, let m = c.minute else { return false }
+        let minutesNow = h * 60 + m
+        if allDay { return weekdays.contains(wd) }
+        if crossesMidnight {
+            if weekdays.contains(wd) && minutesNow >= startMinutes { return true }
+            return weekdays.contains(BlockSchedule.prevWeekday(wd)) && minutesNow < endMinutes
+        }
+        return weekdays.contains(wd) && minutesNow >= startMinutes && minutesNow < endMinutes
+    }
+
     static let weekdaySymbols = ["", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
     /// Calendar weekday after `wd` (1...7, wrapping Sat→Sun).
     static func nextWeekday(_ wd: Int) -> Int { wd == 7 ? 1 : wd + 1 }
+
+    /// Calendar weekday before `wd` (1...7, wrapping Sun→Sat).
+    static func prevWeekday(_ wd: Int) -> Int { wd == 1 ? 7 : wd - 1 }
 
     var weekdaysText: String {
         weekdays.sorted().map { BlockSchedule.weekdaySymbols[$0] }.joined(separator: " ")

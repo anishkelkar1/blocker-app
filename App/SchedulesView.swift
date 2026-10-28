@@ -15,7 +15,7 @@ struct SchedulesView: View {
                     Button { editing = schedule } label: { row(schedule) }
                         .tint(.primary)
                         .card()
-                        .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8))
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                         .swipeActions(edge: .trailing) {
@@ -35,6 +35,7 @@ struct SchedulesView: View {
                         .listRowBackground(Color.clear)
                 }
             }
+            .listStyle(.plain)
             .focusLockScreen()
             .navigationTitle("Schedules")
             .alert("Can't delete this schedule", isPresented: $showDeleteBlocked) {

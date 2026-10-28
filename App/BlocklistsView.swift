@@ -21,7 +21,7 @@ struct BlocklistsView: View {
                     }
                     .tint(.primary)
                     .card()
-                    .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8))
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .swipeActions(edge: .trailing) {
@@ -41,6 +41,7 @@ struct BlocklistsView: View {
                         .listRowBackground(Color.clear)
                 }
             }
+            .listStyle(.plain)
             .focusLockScreen()
             .navigationTitle("Blocklists")
             .alert("Can't delete this blocklist", isPresented: $showDeleteBlocked) {

@@ -100,8 +100,10 @@ struct SchedulesView: View {
     }
 
     private func addNew() {
-        guard let first = blocklists.first else { return }
-        editing = BlockSchedule(name: "New schedule", blocklistIDs: [first.id])
+        // Require at least one blocklist to exist, but pre-select none — the
+        // user picks which to run (Save stays disabled until they do).
+        guard !blocklists.isEmpty else { return }
+        editing = BlockSchedule(name: "New schedule", blocklistIDs: [])
     }
 
     private func reload() {
